@@ -44,8 +44,8 @@
     methods: {
       ...mapMutations(['_userRole']),
       onClickLeft() {
-        if (this.gohome) {
-          if (this.isShow == "index") {
+        if(this.gohome) {
+          if(this.isShow == "index") {
             this.$emit('hideSetting')
           } else {
             this.$router.push('/index');
@@ -55,17 +55,22 @@
         }
       },
       init() {
-        if (this.isShow == "hide") {
+        if(this.isShow == "hide") {
           this.show = false;
         }
       },
       goHome() {
         this.$router.push('/index');
       }
-    },
-    updated() { }, //生命周期 - 更新之后
-    activated() { }, //如果页面有keep-alive缓存功能，这个函数会触发
+    }
   }
 </script>
 <style lang='less' scoped>
+  //   .header {
+  //     position: fixed;
+  //     top: 0;
+  //     left: 0;
+  //     right: 0;
+  //     z-index: 99;
+  //   }
 </style>

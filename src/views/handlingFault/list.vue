@@ -1,13 +1,26 @@
 <template>
   <div class="main">
-    <v-header :title="title" :isShow="isShow" :gohome="gohome"></v-header>
-    <van-tabs v-model="active" swipeable background="#f0f0f0" @click="tabFn">
-      <van-tab title="待处理" class="content">
+    <v-header
+      :title="title"
+      :isShow="isShow"
+      :gohome="gohome"
+    ></v-header>
+    <van-tabs
+      v-model="active"
+      swipeable
+      background="#f0f0f0"
+      @click="tabFn"
+    >
+      <van-tab
+        title="待处理"
+        class="content"
+      >
         <van-pull-refresh
           v-model="unfinished.isDownLoading"
           @refresh="onDownRefresh('unfinished')"
         >
           <van-list
+            id='unfinished-list'
             v-model="unfinished.isUpLoading"
             :finished="unfinished.upFinished"
             :immediate-check="false"
@@ -16,11 +29,14 @@
             @load="onLoad('unfinished')"
           >
             <!-- 加载的内容-->
-            <van-loading type="spinner" v-if="unfinished.loading" />
+            <van-loading
+              type="spinner"
+              v-if="unfinished.loading"
+            />
             <div v-if="unfinished.data.length > 0">
               <van-row
                 v-for="item in unfinished.data"
-                :key="item.id"
+                :key="item.faultID"
                 @click="infoIdFn(item)"
               >
                 <van-col span="5"> <span class="list-icon"></span></van-col>
@@ -29,7 +45,7 @@
                     :title="item.title"
                     title-class="content-title"
                     :value="item.status"
-                    value-class="btn-isok"
+                    value-class="btn-sendPolice"
                   ></van-cell>
                   <p class="content-time">{{ item.time }}</p>
                   <p class="content-info">【详情】 {{ item.content }}</p>
@@ -39,29 +55,39 @@
                 </van-col>
               </van-row>
             </div>
-            <div class="nodata" v-else>暂无数据</div>
+            <div
+              class="nodata"
+              v-else
+            >暂无数据</div>
           </van-list>
         </van-pull-refresh>
       </van-tab>
-      <van-tab title="已完成" class="content">
+      <van-tab
+        title="已完成"
+        class="content"
+      >
         <van-pull-refresh
           v-model="finished.isDownLoading"
           @refresh="onDownRefresh('finished')"
         >
           <van-list
+            id='finished-list'
             v-model="finished.isUpLoading"
             :finished="finished.upFinished"
             :immediate-check="false"
             :finished-text="finished.text"
             :offset="1"
-            @="onLoad('finished')"
+            @load="onLoad('finished')"
           >
             <!-- 加载的内容-->
-            <van-loading type="spinner" v-if="finished.loading" />
+            <van-loading
+              type="spinner"
+              v-if="finished.loading"
+            />
             <div v-if="finished.data.length > 0">
               <van-row
                 v-for="item in finished.data"
-                :key="item.id"
+                :key="item.faultID"
                 @click="infoIdFn(item)"
               >
                 <van-col span="5"> <span class="list-icon"></span></van-col>
@@ -80,7 +106,10 @@
                 </van-col>
               </van-row>
             </div>
-            <div class="nodata" v-else>暂无数据</div>
+            <div
+              class="nodata"
+              v-else
+            >暂无数据</div>
           </van-list>
         </van-pull-refresh>
       </van-tab>
@@ -89,73 +118,75 @@
 </template>
 
 <script>
-  import { getPostData, getParams, getLoc, setLoc } from "@/utils/common.js";
-  import { mapActions, mapMutations, mapState } from "vuex";
+  import { getPostData, getParams, getLoc, setLoc } from '@/utils/common.js';
+  import { mapActions, mapMutations, mapState } from 'vuex';
   import { Notify } from 'vant';
   export default {
+    props: ['flagRe'],
     data() {
       //这里存放数据
       return {
-        title: "故障通知",
-        id: '',
-        infoId: '',
-        isShow: "show",
+        title: '故障通知',
+        isShow: 'show',
         gohome: true,
-        serverTime: "",
         active: 0,
-        newMsgRow: 0,
         unfinished: {
-          statuses: "已上报,已接收",
+          statuses: '已上报,已接收',
           text: '已经拉到最底了',
           data: [],
           loading: true,
           show: true,
-          pageNumber: 1,//页数
-          pageSize: 10,//每页条数
-          isUpLoading: false,//控制上拉加载的加载动画
-          upFinished: false,//上拉加载完毕
-          isDownLoading: false,//控制下拉刷新的加载动画
-          deviceList: [],//用于存放加载的数据
+          pageNumber: 1, //页数
+          pageSize: 10, //每页条数
+          isUpLoading: false, //控制上拉加载的加载动画
+          upFinished: false, //上拉加载完毕
+          isDownLoading: false, //控制下拉刷新的加载动画
+          deviceList: [], //用于存放加载的数据
           isLastPage: false
         },
         finished: {
-          statuses: "已确认",
+          statuses: '已确认,已处理',
           text: '已经拉到最底了',
           data: [],
           loading: true,
           show: true,
-          pageNumber: 1,//页数
-          pageSize: 10,//每页条数
-          isUpLoading: false,//控制上拉加载的加载动画
-          upFinished: false,//上拉加载完毕
-          isDownLoading: false,//控制下拉刷新的加载动画
-          deviceList: [],//用于存放加载的数据
+          pageNumber: 1, //页数
+          pageSize: 10, //每页条数
+          isUpLoading: false, //控制上拉加载的加载动画
+          upFinished: false, //上拉加载完毕
+          isDownLoading: false, //控制下拉刷新的加载动画
+          deviceList: [], //用于存放加载的数据
           isLastPage: false
         }
       };
     },
-    props: [],
+    watch: {
+      flagRe(newVal, oldVal) {
+        if(this.active == 1) {
+          document.getElementById('finished-list').scrollIntoView();
+          this.finished.isDownLoading = true;
+          this.onDownRefresh('finished');
+        } else if(this.active == 0) {
+          document.getElementById('unfinished-list').scrollIntoView();
+          this.unfinished.isDownLoading = true;
+          this.onDownRefresh('unfinished');
+        }
+      }
+    },
     //监听属性 类似于data概念
     computed: {
-      ...mapState(['activeIndex', 'getHandlingFaultTime'])
+      ...mapState(['activeIndex', 'getHandlingFaultTime','newMsgNum'])
     },
-    //监控data中的数据变化
-    watch: {},
-    //生命周期 - 创建完成（可以访问当前this实例） 
+    //生命周期 - 创建完成（可以访问当前this实例）
     created() {
       this.active = this.activeIndex;
-      if (this.$route.params.newMsgRow) {
-        this.newMsgRow = this.$route.params.newMsgRow;
-      }
       //初始化数据
       this.initData('unfinished');
       this.initData('finished');
     },
-    //生命周期 - 挂载完成（可以访问DOM元素）
-    mounted() { },
     //方法集合
     methods: {
-      ...mapMutations(['_userInfo', '_getHandlingFaultTime', '_isRefresh', '_warnId', '_activeIndex']),
+      ...mapMutations(['_userInfo', '_warnId', '_activeIndex','_newMsgNum']),
       ...mapActions(['_getInfo']),
       //详情
       infoIdFn(val) {
@@ -165,93 +196,105 @@
       onDownRefresh(val) {
         this[val].pageNumber = 1;
         this[val].upFinished = false;
-        this[val].isDownLoading = false;
-        //下拉时显示更新消息数
-        if (val == "unfinished") {
-          if (this.newMsgRow > 0) {
-            Notify({ type: 'primary', message: '更新了' + this.newMsgRow + '条消息', duration: 1500 });
-          } else {
-            Notify({ type: 'primary', message: '暂无更多新消息', duration: 1500 });
+        setTimeout(() => {
+          this[val].isDownLoading = false;
+          //下拉时显示更新消息数
+          if(val == 'unfinished') {
+            if(this.newMsgNum > 0) {
+              Notify({ type: 'primary', message: '更新了' + this.newMsgNum + '条消息', duration: 1500 });
+              const params = getPostData("findSensorFaultInfoNotViewNum", {"userID": getLoc('userInfo').userID,"statuses": "已上报","clickTime": getLoc('getHandlingFaultTime')});
+              this._getInfo({
+                ops: params,
+                method: "post",
+                api: "findSensorFaultInfoNotViewNum",
+                callback: res => {
+                  var div = document.createElement("div");
+                  div.innerHTML = res;
+                  var listInfoData = div.querySelector("return").innerHTML;
+                  this.newMsg = Number(listInfoData);
+                  this._newMsgNum(Number(listInfoData));
+                }
+              })
+            } else {
+              Notify({ type: 'primary', message: '暂无更多新消息', duration: 1500 });
+            }
           }
-        }
-        this.initData(val); //加载数据        
+        }, 500);
+        this.initData(val); //加载数据
       },
       onLoad(val) {
-        if (!this[val].isLastPage) {
+        if(!this[val].isLastPage) {
           this[val].pageNumber++;
           this.initData(val);
         }
+        this[val].isUpLoading = false;
       },
-      //获取数据 
+      //获取数据
       initData(val) {
         //提交数据
         let datalist = {
-          "userID": getLoc('userInfo').userID,
-          "statuses": this[val].statuses,
-          "pageNum": this[val].pageNumber,
-          "pageSize": this[val].pageSize
-        }
-        const params = getPostData("findSensorFaultInfo", datalist);
+          userID: getLoc('userInfo').userID,
+          statuses: this[val].statuses,
+          pageNum: this[val].pageNumber,
+          pageSize: this[val].pageSize
+        };
+        const params = getPostData('findSensorFaultInfo', datalist);
 
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "findSensorFaultInfo",
+          method: 'post',
+          api: 'findSensorFaultInfo',
           callback: res => {
-
-            if (val == 'unfinished' && this[val].pageNumber === 1) {
+            if(val == 'unfinished' && this[val].pageNumber === 1) {
               this.getServerTime();
-              this._isRefresh(true);
             }
             this[val].loading = false;
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var listInfoData = div.querySelector("return").innerHTML;
-            if (JSON.parse(listInfoData).isLastPage) {
+            var listInfoData = div.querySelector('return').innerHTML;
+
+            if(JSON.parse(listInfoData).isLastPage) {
               this[val].isLastPage = true;
             }
+            //判断是否有下一页
+            let hasNextPage = JSON.parse(listInfoData).hasNextPage;
             listInfoData = JSON.parse(listInfoData).list;
             //如果只有一条数据时，上拉的最低文字不显示
-            if (this[val].pageNumber === 1 && listInfoData.length < 2) {
-              this[val].text = "";
+            if(this[val].pageNumber === 1 && listInfoData.length < 2) {
+              this[val].text = '';
             } else {
-              this[val].text = "已经拉到最底了";
+              this[val].text = '已经拉到最底了';
             }
 
-            if (listInfoData.length > 0) {
+            if(listInfoData.length > 0) {
               this[val].show = true;
               this[val].data = [];
-              if (listInfoData.length < this[val].pageSize) {
+              //已加载完所有数据
+              if(!hasNextPage) {
                 this[val].upFinished = true;
               }
               //处理数据
-              if (this[val].pageNumber === 1) {
-                this[val].deviceList = listInfoData
+              if(this[val].pageNumber === 1) {
+                this[val].deviceList = listInfoData;
               } else {
-                this[val].deviceList = this[val].deviceList.concat(listInfoData)
+                this[val].deviceList = this[val].deviceList.concat(listInfoData);
               }
-              for (var i = 0; i < this[val].deviceList.length; i++) {
+              for(var i = 0; i < this[val].deviceList.length; i++) {
                 var newdata = {
                   faultID: this[val].deviceList[i].faultID,
-                  title: this[val].deviceList[i].detailedAddress + "发现故障",
+                  title: this[val].deviceList[i].detailedAddress + '设备故障',
                   status: this[val].deviceList[i].status,
-                  time: this[val].deviceList[i].faultStartTime,
+                  time: this[val].deviceList[i].faultStartTimeFormat,
                   content: this[val].deviceList[i].faultCause
-                }
+                };
                 this[val].data.push(newdata);
               }
-              this[val].isUpLoading = false;
-              this[val].isDownLoading = false;
             } else {
-              this[val].text = "";
-              this[val].upFinished = false;
               this[val].show = false;
-              this[val].isDownLoading = false;
-              return
+              return;
             }
           }
         });
-        this[val].isUpLoading = false;
       },
       tabFn(val) {
         this.active = val;
@@ -259,30 +302,32 @@
       },
       //获取服务器时间
       getServerTime() {
-        const params = getPostData("getSystemTime", []);
+        const params = getPostData('getSystemTime', []);
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "getSystemTime",
+          method: 'post',
+          api: 'getSystemTime',
           callback: res => {
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var listInfoData = div.querySelector("return").innerHTML;
-            this.serverTime = listInfoData;
-            this._getHandlingFaultTime(this.serverTime);
+            var listInfoData = div.querySelector('return').innerHTML;
+            setLoc('getHandlingFaultTime',listInfoData);
           }
-        })
-      },
-    },
-  }
+        });
+      }
+    }
+  };
 </script>
-<style lang='less' scoped>
+<style lang="less" scoped>
   .main {
     position: absolute;
     top: 0;
     right: 0;
     bottom: 0;
     left: 0;
+    .van-pull-refresh {
+      min-height: calc(100vh - 3.6rem);
+    }
     .van-tabs {
       position: absolute;
       top: 46px;
@@ -383,10 +428,15 @@
   }
 </style>
 <style>
+  .btn-sendPolice span {
+    color: #1989fa;
+    padding: 2px;
+    font-size: 0.26rem;
+  }
   .btn-isok span {
     background-size: 0.26rem;
     padding-left: 0.3rem;
-    color: #1989fa;
+    color: #07c160;
     font-size: 0.26rem;
   }
 </style>

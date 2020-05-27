@@ -1,75 +1,109 @@
 <!DOCTYPE html>
 <html lang="en">
 
-    <head>
-        <meta charset="utf-8" />
-        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-        <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
-        <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
-        <title>title</title>
-    </head>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico" />
+    <title>title</title>
+</head>
 
-    <body>
-        <noscript>
+<body>
+    <noscript>
             <strong>We're sorry but police doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
         </noscript>
-        <div id="app"></div>
-        <!-- built files will be auto injected -->
-    </body>
-    <script type="text/javascript">
-        mui.init({
-            keyEventBind: {
-                backbutton: true //关闭back按键监听
-            }
-        });
-        // 扩展API加载完毕后调用onPlusReady回调函数
-        document.addEventListener("plusready", onPlusReady, false);
-        // 扩展API加载完毕，现在可以正常调用扩展API
-        function onPlusReady() {
-            // 处理第三方传入的参数
-            localStorage.setItem('version', plus.runtime.version);
+    <div id="app"></div>
+    <!-- built files will be auto injected -->
+</body>
+<script type="text/javascript">
+    mui.init({
+        keyEventBind: {
+            backbutton: true //关闭back按键监听
         }
-        //首页返回键处理
-        // 处理逻辑： 1s内，连续两次按返回键，则退出应用；
-        var first = null;
-        mui.back = function () {
-            // 首次按键， 提示 再按一次退出应用
-            if (!first) {
+    });
+    // 扩展API加载完毕后调用onPlusReady回调函数
+    document.addEventListener("plusready", onPlusReady, false);
+    // 扩展API加载完毕，现在可以正常调用扩展API
+    function onPlusReady() {
+        // 处理第三方传入的参数
+        localStorage.setItem('version', plus.runtime.version);
+        var point = new plus.maps.Point(108.946465, 34.347269);
+        plus.maps.Map.convertCoordinates(point, {}, function(event) {
+            var point = event.coord; // 转换后的坐标值
+            console.log(point);
+            var coordType = event.coordType; // 转换后的坐标系类型
+            alert("Success:" + JSON.stringify(event));
+        }, function(e) {
+            alert("Failed:" + JSON.stringify(e));
+        });
+    }
+    //首页返回键处理
+    // 处理逻辑： 1s内，连续两次按返回键，则退出应用；
+    var first = null;
+    mui.back = function() {
+        // 首次按键， 提示 再按一次退出应用
+        if (!first) {
+            // first = new Date().getTime(); //记录第一次按下回退键的时间
+            if (window.location.hash === '#/systemWarningList' ||
+                window.location.hash === '#/systemWarning' ||
+                window.location.hash === '#/dispatchPoliceList' ||
+                window.location.hash === '#/dispatchPolice' ||
+                window.location.hash === '#/foundFaultList' ||
+                window.location.hash === '#/foundFault' ||
+                window.location.hash === '#/searchFaultList' ||
+                window.location.hash === '#/searchFault' ||
+                window.location.hash === '#/handlingFaultList' ||
+                window.location.hash === '#/surveillanceVideo' ||
+                window.location.hash === '#/handlingFault') {
+                window.location.href = "#/index";
+            } else if (window.location.hash === '#/index') {
                 first = new Date().getTime(); //记录第一次按下回退键的时间
-
-                if (window.location.hash === '#/systemWarningList' ||
-                    window.location.hash === '#/systemWarning' ||
-                    window.location.hash === '#/dispatchPoliceList' ||
-                    window.location.hash === '#/dispatchPolice' ||
-                    window.location.hash === '#/foundFaultList' ||
-                    window.location.hash === '#/foundFault' ||
-                    window.location.hash === '#/handlingFaultList' ||
-                    window.location.hash === '#/handlingFault') {
-                    window.location.href = "#/index";
-                } else if (window.location.hash === '#/index') {
-                    if (localStorage.getItem('showSetting') === 'false') {
-                        mui.toast('再按一次退出应用');
-                    } else {
-                        localStorage.setItem('showSetting', false);
-                        window.location.reload();
-                    }
-                } else if (window.location.hash === '#/login') {
+                if (localStorage.getItem('showSetting') === 'false') {
                     mui.toast('再按一次退出应用');
+                } else {
+                    localStorage.setItem('showSetting', false);
+                    // window.location.reload();
+                }
+            } else if (window.location.hash === '#/login') {
+                first = new Date().getTime(); //记录第一次按下回退键的时间
+                mui.toast('再按一次退出应用');
+            } else if (window.location.hash === '#/surveillanceVideoList') {
+                //如果在播放视频列表中且播放控件打开则返回按键为关闭控件
+                if (!!localStorage.getItem('videoplayer') && localStorage.getItem('videoplayer')) {
+                    localStorage.setItem('videoplayer', false);
+                }
+                if (!localStorage.getItem('videoplayer')) {
+                    window.location.href = "#/index";
+                }
+            } else {
+                if (localStorage.getItem('imagePreviewNow')) {
+                    localStorage.removeItem('imagePreviewNow');
                 } else {
                     history.go(-1); // 回退到上一页
                 }
 
-                setTimeout(function () {
-                    //1s 后清除
-                    first = null;
-                }, 1000);
-            } else {
-                if (new Date().getTime() - first < 1000) {
-                    //如果两次按下的时间小于1s
-                    plus.runtime.quit(); //那么就退出app
-                }
             }
-        };
-    </script>
+
+            setTimeout(function() {
+                //1s 后清除
+                first = null;
+            }, 1000);
+        } else {
+            if (new Date().getTime() - first < 1000) {
+                //如果两次按下的时间小于1s
+                // plus.runtime.quit(); //那么就退出app
+                let cm = ['确认', '取消'];
+                mui.confirm("您确认是否退出应用？", "提示", cm, (e) => {
+                    if (e.index == 0) {
+                        plus.runtime.quit(); //退出app
+                    } else {
+                        return false;
+                    }
+                });
+            }
+        }
+    };
+</script>
 
 </html>

@@ -1,8 +1,11 @@
 // 封装请求
-import api from './api';
 import axios from 'axios';
-import { Toast } from 'vant';
+import {
+    Toast
+} from 'vant';
 import store from '../store';
+import api from './api';
+console.log(store, 11);
 
 // 全局设置
 axios.defaults.headers.common['Authorization'] = 'demo';
@@ -94,7 +97,9 @@ htp.interceptors.response.use(
         return res;
     },
     err => {
-        const { response } = err;
+        const {
+            response
+        } = err;
         // 这里是返回状态码不为200时候的错误处理
         if (response) {
             //请求已发出，但是不在2XX的范围
@@ -107,8 +112,11 @@ htp.interceptors.response.use(
 );
 
 // 处理接口规范的公有方法
-// 处理接口规范的公有方法
-const xhr = ({ method = 'post', ur, options }) => {
+const xhr = ({
+    method = 'post',
+    ur,
+    options
+}) => {
     let p,
         m = false;
     let load = {
@@ -147,7 +155,7 @@ const xhr = ({ method = 'post', ur, options }) => {
                         if (response.data && response.status == 200) {
                             resolve(response.data);
                         } else {
-                            reject(response.data.msg);
+                            reject(response.status);
                         }
                     },
                     er => {

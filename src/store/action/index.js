@@ -25,5 +25,17 @@ export default {
                 });
             }
         );
+    },
+    //获取消息创建通知栏
+    _getMessage({
+        commit
+    }, data) {
+        // 将warningID传递给点击通知栏信息事件
+        plus.push.createMessage(data.content, data.warningID, {
+            sound: 'system',
+            title: data.title,
+            cover: true
+        });
+
     }
 };

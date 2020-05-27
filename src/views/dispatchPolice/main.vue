@@ -5,7 +5,7 @@
       :isShow="isShow"
       :gohome="gohome"
     ></v-header>
-    <router-view />
+    <router-view :flagRe='flagRe' />
     <v-setting
       v-if="showSetting"
       v-on:changeUserFn="changeUserFn"
@@ -13,22 +13,10 @@
     <van-tabbar v-model="active">
       <van-tabbar-item
         @click="homeFn"
-        :info="newMsg"
-        v-if="newMsg != 0"
+        :dot="newMsgNum ? true : false"
       >
         <span>派警</span>
         <img
-          slot="icon"
-          slot-scope="props"
-          :src="props.active ? icon.active : icon.normal"
-        />
-      </van-tabbar-item>
-        <van-tabbar-item
-          @click="homeFn"
-          v-else
-        >
-          <span>派警</span>
-          <img
           slot="icon"
           slot-scope="props"
           :src="props.active ? icon.active : icon.normal"
@@ -59,8 +47,6 @@
         isShow: "show",
         gohome: true,
         timeout: null,
-        newMsg: 0,   //新消息条数提醒
-        newMsgRow: 0,
         icon: {
           normal: require('../../assets/dispatch01.png'),
           active: require('../../assets/dispatch02.png')
@@ -68,24 +54,27 @@
         myicon: {
           normal: require('../../assets/my01.png'),
           active: require('../../assets/my02.png')
-        }
+        },
+        flagRe: 0,
       };
     },
     //监听属性 类似于data概念
     computed: {
-      ...mapState(['isRefresh'])
+      ...mapState(['dispatchpoliceNum','newMsgNum'])
     },
     //监控data中的数据变化
     watch: {
-      isRefresh: function(val, oldVal) {
-        if(val) {
-          this.getNewMsgLength();
-        }
-      }
+      //监听派警未处理总数是否有变，有则给图标红点
+      dispatchpoliceNum(){
+        this.getNewMsgLength();
+      },
+    },
+    //页面被销毁前
+    beforeDestroy(){
+      this._newMsgNum(0);
     },
     //生命周期 - 创建完成（可以访问当前this实例） 
     created() {
-      this.timeout = setInterval(() => { this.getNewMsgLength(); }, 5000);
       if(this.$route.params.show) {
         this.setFn();
         this.active = 1;
@@ -93,12 +82,9 @@
         this.homeFn();
       }
     },
-    beforeDestroy() {
-      clearInterval(this.timeout);
-    },
     //方法集合
     methods: {
-      ...mapMutations(['_userInfo', '_getDispatchPoliceTime', '_isRefresh']),
+      ...mapMutations(['_userInfo','_newMsgNum']),
       ...mapActions(['_getInfo']),
       setFn() {
         this.title = "个人中心";
@@ -107,12 +93,13 @@
       },
       homeFn() {
         this.title = "派警消息";
+        this.flagRe++;
         this.showSetting = false;
-        this.$router.push({ name: 'dispatchPoliceList', params: { newMsgRow: this.newMsgRow } });
+        this.$router.push('/dispatchPoliceList');
       },
       changeUserFn() {
-        clearInterval(this.timeout);
         setLoc('userInfo', '');
+        setLoc('currentUser', '');
         this.$router.push('/login');
       },
       getNewMsgLength() {
@@ -125,15 +112,10 @@
           method: "post",
           api: "findNewDispatchPoliceNum",
           callback: res => {
-            this._isRefresh(false);
             var div = document.createElement("div");
             div.innerHTML = res;
             var listInfoData = div.querySelector("return").innerHTML;
-            this.newMsg = listInfoData;
-            this.newMsgRow = listInfoData;
-            if(this.newMsg > 99) {
-              this.newMsg = '99+';
-            }
+            this._newMsgNum(Number(listInfoData));
           }
         })
       }

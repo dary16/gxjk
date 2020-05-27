@@ -1,9 +1,6 @@
 <template>
   <div class="about">
-    <v-header
-      :title="title"
-      v-on:refrash="refrashFn"
-    ></v-header>
+    <v-header :title="title"></v-header>
     <van-loading
       size="30px"
       text-size="16px"
@@ -22,7 +19,7 @@
           v-if="length === 0"
         >
           <img src="../../assets/noimg.jpg" />
-                </div>
+        </div>
           <div>
             <van-swipe
               :autoplay="3000"
@@ -47,11 +44,61 @@
         >
           <div class="left fl">
             <img src="../../assets/warn/warn.png" alt="" />
-                </div>
+            </div>
             <div class="right fl">
-              <h3>{{ objData.warningTypeLabel }}告警地点</h3>
+              <h3>{{ objData.warningTypeLabel }}告警地点
+                <template>
+                  <van-icon
+                    v-if='objData.level == 0'
+                    name="warn-o"
+                    size="0.36rem"
+                    color="grey"
+                    style="vertical-align: bottom;"
+                  />
+                  <van-icon
+                    v-else-if='objData.level == 1'
+                    name="warn-o"
+                    size="0.36rem"
+                    color="red"
+                    style="vertical-align: bottom;"
+                  />
+                  <van-icon
+                    v-else-if='objData.level == 2'
+                    name="warn-o"
+                    size="0.36rem"
+                    color="orange"
+                    style="vertical-align: bottom;"
+                  />
+                  <van-icon
+                    v-else
+                    name="warn-o"
+                    size="0.36rem"
+                    color="blue"
+                    style="vertical-align: bottom;"
+                  />
+                </template>
+              </h3>
               <h5>{{ objData.address }}，标桩号：{{ objData.num }}，预置位：{{ objData.preAdd }}</h5>
             </div>
+          </div>
+          <div class="objData">
+            <div>
+              <span class="objTitle">识别对象：</span>
+              <b>{{objData.identifyObject}}</b>
+            </div>
+            <!-- <van-divider v-show='showObj' /> -->
+            <ul v-show='showObj'>
+              <li>
+                <span class="objTitle">屏蔽对象：</span>
+                <b>{{objData.accessData.identifyObjectNames}}</b>
+              </li>
+              <!-- <van-divider /> -->
+              <li>
+                <span class="objTitle">屏蔽时间段：</span>
+                <b>{{objData.accessData.shieldingStartDay}} {{objData.accessData.shieldingStartTime}}至{{objData.accessData.shieldingEndDay}} {{objData.accessData.shieldingEndTime}}</b>
+              </li>
+            </ul>
+
           </div>
           <div
             class="btns"
@@ -60,6 +107,7 @@
             <div
               class="all-btn"
               v-if="isSendPolice"
+              @click="watchDispatchInfo"
             >
               已派警
             </div>
@@ -92,33 +140,72 @@
             </div>
           </div>
         </div>
+        <van-dialog
+          id="popDialog"
+          v-model="isShow"
+          :show-cancel-button="false"
+        >
+          <van-field
+            label="派警时间"
+            v-model="dispatchTime"
+            readonly
+          />
+          <van-field
+            v-if="dispatchPersons.toString().length < 17"
+            label="巡线工"
+            v-model="dispatchPersons"
+            readonly
+          />
+          <van-field
+            v-else
+            label="巡线工"
+            type="textarea"
+            v-model="dispatchPersons"
+            readonly
+          />
+
+        </van-dialog>
       </div>
 </template>
 
 <script>
   import { getPostData, getParams, getObjParams, getLoc, setLoc } from '@/utils/common.js';
   import { mapActions, mapMutations, mapState } from 'vuex';
-  import { ImagePreview, Toast } from 'vant';
+  import { ImagePreview, Toast, Dialog } from 'vant';
   export default {
     data() {
       return {
-        title: '图集',
+        title: '告警详情',
         length: 0,
         warningID: '',
         isShowBtn: false,
         showLoading: true,
         isViewDispatchPolice: false,
         dispatchId: '',
+        dispatchTime: '',
+        dispatchPersons: '',
         isRightText: '识别正确不派警',
         isSendPolice: false,
+        showObj: false,
+        personNum: 0,
         objData: {
           address: '',
           num: '',
           sensorNO: '',
-          preAdd: ''
+          preAdd: '',
+          identifyObject: '',
+          level: '',
+          accessData: {
+            identifyObjectNames: '',
+            shieldingStartDay: '',
+            shieldingStartTime: '',
+            shieldingEndDay: '',
+            shieldingEndTime: ''
+          }
         },
         mapData: {},
-        images: []
+        images: [],
+        isShow: false
       };
     },
     computed: {
@@ -146,13 +233,18 @@
             var div = document.createElement('div');
             div.innerHTML = res;
             var curUserinfo = JSON.parse(div.querySelector('return').innerHTML);
+            // console.log(curUserinfo);
             if(curUserinfo.warningDTO.isSendPolice == '是') {
               this.isRightText = '确认告警';
               this.isSendPolice = true;
             }
-            if(curUserinfo.warningDTO.dispatchPoliceStatus != '') {
+
+            if(curUserinfo.warningDTO.status == '已回执') {
               this.isViewDispatchPolice = true;
               this.dispatchId = curUserinfo.warningDTO.dispatchPoliceID;
+            } else if(curUserinfo.warningDTO.status == '已派警') {
+              this.dispatchId = curUserinfo.warningDTO.dispatchPoliceID;
+              this.dispatchTime = curUserinfo.warningDTO.dispatchTime;
             }
 
             this.mapData = curUserinfo.warningDTO;
@@ -161,13 +253,21 @@
             this.objData.num = curUserinfo.warningDTO.stakeNO;
             this.objData.preAdd = curUserinfo.warningDTO.presetNO;
             this.objData.warningTypeLabel = curUserinfo.warningDTO.warningTypeLabel;
-            // this.onePic = curUserinfo.warningImgList[0].imagePath;
+            this.objData.identifyObject = curUserinfo.identifyObject;
+            this.objData.level = curUserinfo.warningDTO.soundLevel;
+            // console.log(curUserinfo);
+            if(curUserinfo.shieldingTimeDTO !== undefined) {
+              //有屏蔽对象
+              this.objData.accessData = JSON.parse(JSON.stringify(curUserinfo.shieldingTimeDTO))
+              this.showObj = true;
+            };
 
             this.length = curUserinfo.warningImgList.length;
             //请求每一张图片
-            if(curUserinfo.warningImgList.length > 1) {
-              curUserinfo.warningImgList.forEach(item => {
-                let params2 = getPostData('getImageInfo', [true, item.warningRefID]);
+            if(curUserinfo.warningImgList.length > 0) {
+              //   alert(curUserinfo.warningImgList);
+              curUserinfo.warningImgList.forEach((item, index) => {
+                let params2 = getPostData('getImageInfo', [false, item.warningRefID]);
                 this._getInfo({
                   ops: params2,
                   methods: 'post',
@@ -177,15 +277,13 @@
                     div.innerHTML = res;
                     let imgItem = JSON.parse(div.querySelector('return').innerHTML);
                     this.images.push(imgItem.imgPath);
+                    this.showLoading = false;
                   }
                 });
               });
-              this.showLoading = false;
-            } else if(curUserinfo.warningImgList.length === 1) {
-              this.images.push(curUserinfo.imgPath);
-              this.showLoading = false;
             } else {
               this.images = [];
+              this.showLoading = false;
             }
             // //判断是否有操作权限
             this.checkIsPermission();
@@ -197,7 +295,12 @@
       },
       //点击查看图片
       swiperImgClick() {
-        ImagePreview(this.images);
+        const img = ImagePreview(this.images);
+        setLoc("imagePreviewNow", true);
+        plus.key.addEventListener("backbutton", onBack => {
+          img.close();
+          plus.key.removeEventListener("backbutton", onPlusReady);
+        });
       },
       toRight() {
         this.updateWarning('qr');
@@ -248,11 +351,30 @@
           }
         });
       },
-      refrashFn() {
-        // this.getListdata();
+      watchDispatchInfo() {
+        this.isShow = !this.isShow;
+        const params = getPostData('findDispatchPersonListByDispatchPoliceID', [this.dispatchId]);
+        this._getInfo({
+          ops: params,
+          method: 'post',
+          api: 'findDispatchPersonListByDispatchPoliceID',
+          callback: res => {
+            var div = document.createElement('div');
+            div.innerHTML = res;
+            let result = div.querySelector('return').innerHTML;
+            let persons = [];
+            // console.log(JSON.parse(result));
+            this.personNum = JSON.parse(result).length;
+            if(this.personNum > 0) {
+              JSON.parse(result).forEach(item => {
+                persons.push(item.personName);
+              })
+              this.dispatchPersons = persons.join(',');
+            };
+          }
+        });
       }
-    },
-    updated() { }
+    }
   };
 </script>
 
@@ -271,7 +393,7 @@
       }
       .address {
         position: relative;
-        padding: 0.4rem 0.1rem;
+        padding: 0.3rem 0.1rem;
         display: flex;
         background: #fff;
         .left {
@@ -294,7 +416,8 @@
             text-align: left;
             font-size: 0.26rem;
             color: #929292;
-            line-height: 0.5rem;
+            line-height: 0.4rem;
+            padding-top: 0.05rem;
           }
         }
       }
@@ -330,6 +453,57 @@
           background-color: #eaeaea;
         }
       }
+      .objData {
+        div {
+          padding: 0.1rem;
+          background: #fff;
+          display: flex;
+          text-align: left;
+          color: #929292;
+          span {
+            float: left;
+            // width: 47%;
+            font-size: 0.28rem;
+          }
+          b {
+            font-weight: normal;
+            font-size: 0.26rem;
+          }
+        }
+        ul {
+          li {
+            background: #fff;
+            margin-top: 0.015rem;
+            text-align: left;
+            line-height: 0.5rem;
+            padding: 0.1rem;
+            color: #929292;
+            span {
+              font-size: 0.28rem;
+            }
+            b {
+              font-weight: normal;
+              font-size: 0.26rem;
+            }
+          }
+        }
+      }
     }
+  }
+</style>
+<style>
+  #popDialog .van-dialog__content .van-cell__value {
+    font-size: 0.32rem !important;
+  }
+  #popDialog .van-dialog__content .van-cell__value .van-field__body input {
+    line-height: 0.65rem !important;
+    height: 0.65rem !important;
+  }
+  #popDialog .van-dialog__content .van-cell__value .van-field__body textarea {
+    line-height: 0.65rem !important;
+  }
+  .content .van-divider {
+    margin: 0 !important;
+    padding: 0 !important;
   }
 </style>

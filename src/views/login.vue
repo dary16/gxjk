@@ -1,9 +1,5 @@
 <template>
   <div class="login">
-    <!-- <div class="head">
-      <div class="logo"></div>
-      <h1>{{ title }}</h1>
-    </div> -->
     <div class="user">
       <van-cell-group>
         <van-field
@@ -52,13 +48,14 @@
       @click-overlay="showSelctUser()"
     />
   </div>
+
 </template>
 
 <script>
   import { getPostData, getParams, getLoc, setLoc } from '../utils/common.js';
   import { Toast, Dialog } from 'vant';
   import { mapActions, mapMutations, mapState } from 'vuex';
-  //   import '../utils/getNewMeg.js';
+  import axios from 'axios';
   export default {
     data() {
       //这里存放数据
@@ -74,40 +71,80 @@
         showDownload: false,
         downloadUrl: '',
         //android下载地址
-        androidUrl: 'https://monitor.tj.chinatowercom.cn/download/downloadAPP?appType=Android',
+        androidUrl: '',
         //ios下载地址
-        iosUrl: 'itms-services://?action=download-manifest&url=https://monitor.tj.chinatowercom.cn/app/hhgc.plist',
+        iosUrl: '',
         isDisable: false,
         stoptime: '',
-        updateContent: '1.优化更新下载提示及体验' + '</br>' + '2.新增实时告警提醒功能',
+        updateContent: '1.优化部分样式' + '</br>' + '2.提升了一些用户体验',
         downloadFinish: false,
         version: ''
       };
     },
-    props: [],
     //监听属性 类似于data概念
     computed: {
-      ...mapState(['userInfo', 'saveName', 'usernameList', 'userRole', 'getSystemWarningTime', 'getHandlingFaultTime', 'getFoundFaultTime', 'getDispatchPoliceTime'])
+      ...mapState(['urlCasWsWeb', 'userInfo', 'saveName', 'usernameList', 'userRole', 'getSystemWarningTime', 'getHandlingFaultTime', 'getFoundFaultTime', 'getDispatchPoliceTime', 'warningNum'])
     },
-    //监控data中的数据变化
-    watch: {},
     //生命周期 - 创建完成（可以访问当前this实例）
     created() {
-      this.version = localStorage.getItem('version');
-      this.checkVersion();
+      //安卓下载地址
+      this.androidUrl = this.urlCasWsWeb.webUrl + '/download/downloadAPP?appType=Android',
+        //ios下载地址
+        this.iosUrl = 'itms-services://?action=download-manifest&url=' + this.urlCasWsWeb.webUrl + '/app/webGis_app.plist',
+        this.version = localStorage.getItem('version');
+      //   this.checkVersion();
       this.getUser();
       this.getServerTimeFn();
     },
-    //生命周期 - 挂载完成（可以访问DOM元素）
-    mounted() { },
     //方法集合
     methods: {
-      ...mapMutations(['_userInfo', '_saveName', '_usernameList', '_userRole', '_getSystemWarningTime', '_getHandlingFaultTime', '_getFoundFaultTime', '_getDispatchPoliceTime']),
+      ...mapMutations(['_userInfo', '_saveName', '_usernameList', '_userRole', '_warningNum', '_dispatchpoliceNum', '_handlingFaultNum', '_foundFaultNum']),
       ...mapActions(['_getInfo']),
+      //获取未处理数
+      getUndoneNum() {
+        const apiData = [
+          { api: 'findWarningList', arr: [getLoc('userInfo').userID, '未处理', 1, 1] },
+          { api: 'findSensorFaultInfo', arr: { userID: getLoc('userInfo').userID, statuses: '已上报,已接收', pageNum: 1, pageSize: 1 } },
+          { api: 'findSensorFaultInfo', arr: { userID: getLoc('userInfo').userID, statuses: '已处理', pageNum: 1, pageSize: 1 } },
+          { api: 'findDispatchPolice', arr: [getLoc('userInfo').userID, '已派警,处理中', 1, 1] },
+        ];
+        for(let i = 0; i < apiData.length; i++) {
+          const params = getPostData(apiData[i].api, apiData[i].arr);
+          this._getInfo({
+            ops: params,
+            method: 'post',
+            api: apiData[i].api,
+            callback: res => {
+              var div = document.createElement('div');
+              div.innerHTML = res;
+              let data = JSON.parse(div.querySelector('return').innerHTML);
+              if(apiData[i].api == 'findWarningList') {
+                this._warningNum(data.total);
+              } else if(apiData[i].api == 'findSensorFaultInfo' && apiData[i].arr.statuses == '已上报,已接收') {
+                this._handlingFaultNum(data.total);
+              } else if(apiData[i].api == 'findSensorFaultInfo' && apiData[i].arr.statuses == '已处理') {
+                this._foundFaultNum(data.total);
+              } else if(apiData[i].api == 'findDispatchPolice') {
+                this._dispatchpoliceNum(data.total);
+              }
+            }
+          });
+        }
+      },
+      //连接websocket
+      getWS(clientID) {
+        if("WebSocket" in window) {
+          console.log("您的浏览器支持 WebSocket!!!!!");
+          this.ws = new WebSocket(this.urlCasWsWeb.wsUrl + `/webSocketService?clientID=` + clientID);
+          this.getNoticeWS.setWs(this.ws);
+        } else {
+          console.log("您的浏览器不支持 WebSocket!");
+        }
+      },
       //获取缓存用户信息
       getUser() {
-        if(getLoc('userInfo')) {
-          this.$router.push('/index');
+        if(getLoc('currentUser')) {
+          this.currentLoginFn();
         }
         if(getLoc('saveName')) {
           this.user.username = getLoc('saveName');
@@ -174,13 +211,13 @@
             var listInfoData = div.querySelector('return').innerHTML;
             this.serverTime = listInfoData;
             if(val == 'getSystemWarningTime') {
-              this._getSystemWarningTime(this.serverTime);
+              setLoc('getSystemWarningTime', this.serverTime);
             } else if(val == 'getHandlingFaultTime') {
-              this._getHandlingFaultTime(this.serverTime);
+              setLoc('getHandlingFaultTime', this.serverTime);
             } else if(val == 'getFoundFaultTime') {
-              this._getFoundFaultTime(this.serverTime);
+              setLoc('getFoundFaultTime', this.serverTime);
             } else if(val == 'getDispatchPoliceTime') {
-              this._getDispatchPoliceTime(this.serverTime);
+              setLoc('getDispatchPoliceTime', this.serverTime);
             }
           }
         });
@@ -191,7 +228,7 @@
           app = navigator.appVersion;
         let isAndroid = u.indexOf('Android') > -1 || u.indexOf('Linux') > -1; //g
         let isIOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); //ios终端
-        let systemType = 'Android';
+        let systemType = '';
         if(isAndroid) {
           systemType = 'Android';
           this.downloadUrl = this.androidUrl;
@@ -218,69 +255,70 @@
                 //手机上提示下载
                 if(this.version) {
                   Dialog.confirm({
-                    message: '发现新版本，请更新后使用。' +
-                      '<span style="display: block;text-align: left;font-size: 0.28rem;padding: 0.1rem;">当前版本：' + this.version + '</span>'
-                  }).then(() => {
-                    if(systemType == 'Android') {
-                      var dtask = plus.downloader.createDownload(this.downloadUrl, {}, function(d, status) {
-                        if(status == 200) {
-                          var path = d.filename;
-                          this.downloadFinish = true;
+                    message: '发现新版本，请更新后使用。' + '<span style="display: block;text-align: left;font-size: 0.28rem;padding: 0.1rem;">当前版本：' + this.version + '</span>'
+                  })
+                    .then(() => {
+                      if(systemType == 'Android') {
+                        var dtask = plus.downloader.createDownload(this.downloadUrl, {}, function(d, status) {
+                          if(status == 200) {
+                            var path = d.filename;
+                            this.downloadFinish = true;
 
-                          plus.runtime.install(path);
-                          plus.runtime.quit();
-                          setLoc('updateState', true);
-                        } else {
-                          //下载失败
-                          alert('下载失败: ' + status);
-                        }
-                      });
-                      dtask.addEventListener('statechanged', (task, status) => {
-                        if(!dtask) {
-                          return;
-                        }
-                        switch(task.state) {
-                          case 1:
-                            //开始
-                            Toast.loading({
-                              message: '开始下载...',
-                              forbidClick: true,
-                              loadingType: 'spinner'
-                            });
-                            break;
-                          case 2:
-                            //已连接到服务器
-                            Toast('连接到服务器...');
-                            break;
-                          case 3:
-                            //已接收到数据
-                            Toast.loading({
-                              message: '正在下载...',
-                              forbidClick: true,
-                              loadingType: 'spinner'
-                            });
-                            var nowdata = Math.floor((task.downloadedSize * 100) / task.totalSize);
-                            // alert(nowdata);
-                            if(nowdata % 10 === 0) {
-                              Toast('已下载：' + nowdata + '%');
-                              if(nowdata === 100) {
-                                Toast('正在准备环境，请稍后!');
+                            plus.runtime.install(path);
+                            plus.runtime.quit();
+                            setLoc('updateState', true);
+                          } else {
+                            //下载失败
+                            alert('下载失败: ' + status);
+                          }
+                        });
+                        dtask.addEventListener('statechanged', (task, status) => {
+                          if(!dtask) {
+                            return;
+                          }
+                          switch(task.state) {
+                            case 1:
+                              //开始
+                              Toast.loading({
+                                message: '开始下载...',
+                                forbidClick: true,
+                                loadingType: 'spinner'
+                              });
+                              break;
+                            case 2:
+                              //已连接到服务器
+                              Toast('连接到服务器...');
+                              break;
+                            case 3:
+                              //已接收到数据
+                              Toast.loading({
+                                message: '正在下载...',
+                                forbidClick: true,
+                                loadingType: 'spinner'
+                              });
+                              var nowdata = Math.floor((task.downloadedSize * 100) / task.totalSize);
+                              // alert(nowdata);
+                              if(nowdata % 10 === 0) {
+                                Toast('已下载：' + nowdata + '%');
+                                if(nowdata === 100) {
+                                  Toast('正在准备环境，请稍后!');
+                                }
                               }
-                            }
-                            break;
-                          case 4:
-                            //下载完成
-                            Toast.success('下载完成！');
-                            break;
-                        }
-                      });
-                      dtask.start();
-                    } else {
-                      plus.runtime.openURL(this.downloadUrl);
-                    }
-                  }).catch(() => {
-                    plus.runtime.quit();
-                  });
+                              break;
+                            case 4:
+                              //下载完成
+                              Toast.success('下载完成！');
+                              break;
+                          }
+                        });
+                        dtask.start();
+                      } else {
+                        plus.runtime.openURL(this.downloadUrl);
+                      }
+                    })
+                    .catch(() => {
+                      plus.runtime.quit();
+                    });
                 }
               } else {
                 //版本号相同，则更新成功，提示更新内容
@@ -288,97 +326,39 @@
                   //已下载提示更新内容
                   Dialog.alert({
                     title: '更新内容',
-                    message: '<span style="display: block;text-align: left;font-size: 0.28rem;padding: 0.1rem;">当前版本：' + this.version + '</span>' +
-                      '<span style="display: block;text-align: left;font-size: 0.3rem;padding: 0.1rem;">' + this.updateContent + '</span>'
+                    message: '<span style="display: block;text-align: left;font-size: 0.28rem;padding: 0.1rem;">当前版本：' + this.version + '</span>' + '<span style="display: block;text-align: left;font-size: 0.3rem;padding: 0.1rem;">' + this.updateContent + '</span>'
                   }).then(() => {
                     //修改缓存里的值
                     setLoc('updateState', false);
                   });
-
                 }
               }
             }
           });
         }
       },
-      //获取新消息
-      getNewMsg() {
-        //判断用户是否已经登录
-        if(getLoc('userInfo').userID) {
-          let id = getLoc('userInfo').userID;
-          const params = getPostData('getAllUntreatedInfoNum', [id]);
-
-          this._getInfo({
-            ops: params,
-            method: 'post',
-            api: 'getAllUntreatedInfoNum',
-            callback: res => {
-              var div = document.createElement('div');
-              div.innerHTML = res;
-              var listInfoData = div.querySelector('return').innerHTML;
-              let result = JSON.parse(listInfoData);
-
-              //判断缓存里是否是第一次登录
-              if(getLoc('firstNum')) {
-                let firstNum = getLoc('firstNum');
-                //判断数量是否有变化
-                if(result == firstNum) {
-                  setLoc('firstNum', result);
-                  if(window.plus) {
-                    // plus.push.clear();
-                    plus.runtime.setBadgeNumber(result, {
-                      title: '新消息',
-                      content: '您有' + result + '条未读消息'
-                    });
-                  }
-                } else {
-                  //判断返回值是否大于0
-                  if(result > 0) {
-                    //变则替换新数据
-                    setLoc('firstNum', result);
-                    if(window.plus) {
-                      // plus.push.clear();
-                      // plus.runtime.setBadgeNumber(-1);
-                      if(result > 99) {
-                        plus.runtime.setBadgeNumber(99, {
-                          title: '新消息',
-                          content: '您有' + result + '条未读消息'
-                        });
-                      } else {
-                        plus.runtime.setBadgeNumber(result, {
-                          title: '新消息',
-                          content: '您有' + result + '条未读消息'
-                        });
-                      }
-                      plus.device.beep();
-                      // plus.push.createMessage(num, 'LocalMSG', {
-                      //     title: '新消息',
-                      //     sound: 'system',
-                      //     cover: true
-                      // });
-                    }
-                  }
-                }
-              } else {
-                //第一次登录
-                setLoc('firstNum', result);
-                if(window.plus) {
-                  // plus.push.clear();
-                  plus.runtime.setBadgeNumber(result, {
-                    title: '新消息',
-                    content: '您有' + result + '条未读消息'
-                  });
-                  plus.device.beep();
-                  // plus.push.createMessage(num, 'LocalMSG', {
-                  //     title: '新消息',
-                  //     sound: 'system',
-                  //     cover: true
-                  // });
-                }
-              }
+      currentLoginFn() {
+        console.log(process.env.NODE_ENV);
+        axios({
+          method: 'post',
+          //现场
+          url: process.env.NODE_ENV == 'development' ? '/loginService/v1/tickets' : this.urlCasWsWeb.casUrl + '/v1/tickets',
+          data: { username: getLoc('currentUser').username, password: getLoc('currentUser').password },
+        }).then(
+          res => {
+            //判断是否通过cas登录
+            if(res.status == '201') {
+              this.getUndoneNum();
+              //连接websocket
+              this.getWS(getLoc('userInfo').userID);
+              this.$router.push('/index');
             }
-          });
-        }
+          }
+        ).catch(
+          err => {
+            console.log(err);
+          }
+        );
       },
       loginFn() {
         //验证数据
@@ -387,75 +367,112 @@
           return false;
         }
 
-        //提交数据
-        const params = getPostData('login', [this.user.username, this.user.password]);
-
+        //通过cas登录
+        axios({
+          method: 'post',
+          //现场
+          url: process.env.NODE_ENV == 'development' ? '/loginService/v1/tickets' : this.urlCasWsWeb.casUrl + '/v1/tickets',
+          data: { username: this.user.username, password: this.user.password },
+        }).then(
+          res => {
+            if(res.status == '201') {
+              const params = getPostData('getUserInfo', [this.user.username]);
+              this._getInfo({
+                ops: params,
+                method: 'post',
+                api: 'getUserInfo',
+                callback: res => {
+                  var div = document.createElement('div');
+                  div.innerHTML = res;
+                  var curUserinfo = JSON.parse(div.querySelector('return').innerHTML);
+                  this._userInfo(curUserinfo);
+                  //缓存当前用户名
+                  this._saveName(this.user.username);
+                  //缓存当前用户名和密码
+                  setLoc('currentUser', { 'username': this.user.username, 'password': this.user.password });
+                  //缓存历史用户
+                  var namelist = [];
+                  if(getLoc('usernameList') != null) {
+                    namelist = getLoc('usernameList');
+                  }
+                  namelist.push(this.user.username);
+                  //去掉缓存里的firstNum
+                  if(getLoc('firstNum')) {
+                    localStorage.removeItem('firstNum');
+                  }
+                  //去重后缓存
+                  this._usernameList(Array.from(new Set(namelist)));
+                  //连接websocket
+                  this.getWS(getLoc('userInfo').userID);
+                  //获取各个模块数据
+                  this.getUndoneNum();
+                  //跳转到首页
+                  this.$router.push('/index');
+                  this.getRoles();
+                }
+              });
+            }
+          }
+        ).catch(
+          error => {
+            let statu = error.response.status;
+            if(statu == '410') {
+              Toast({ position: 'bottom', message: '用户名或密码不正确' });
+            } else if(statu == '402') {
+              Toast({ position: 'bottom', message: '该账号为弱密码，请立即修改密码' });
+              const params = getPostData('getUserInfo', [this.user.username]);
+              this._getInfo({
+                ops: params,
+                method: 'post',
+                api: 'getUserInfo',
+                callback: res => {
+                  var div = document.createElement('div');
+                  div.innerHTML = res;
+                  var curUserinfo = JSON.parse(div.querySelector('return').innerHTML);
+                  this._userInfo(curUserinfo);
+                }
+              })
+              this.$router.push('/changePassword');
+            } else if(statu == '403') {
+              Toast({ position: 'bottom', message: '账号冻结' });
+            } else if(statu == '404') {
+              Toast({ position: 'bottom', message: '账号不存在' });
+            } else if(statu == '423') {
+              Toast({ position: 'bottom', message: '账号闲置锁定，请联系管理员激活账号' });
+            } else if(statu == '500') {
+              Toast({ position: 'bottom', message: '系统异常（获取系统参数时出错）' });
+            } else {
+              Toast(error);
+            }
+            this.user.password = '';
+            this.isDisable = true;
+            var num = 3;
+            var loop = () => {
+              this.stoptime = '(' + num + ')';
+              if(num > 0) {
+                num--;
+                setTimeout(loop, 1000);
+              } else {
+                this.stoptime = '';
+                this.isDisable = false;
+              }
+            };
+            setTimeout(loop, 1);
+          }
+        )
+      },
+      //获取角色
+      getRoles() {
+        const params = getPostData('findUserRole', [getLoc('userInfo').userID]);
         this._getInfo({
           ops: params,
           method: 'post',
-          api: 'login',
+          api: 'findUserRole',
           callback: res => {
             var div = document.createElement('div');
             div.innerHTML = res;
-            var curUserinfo = JSON.parse(div.querySelector('return').innerHTML);
-            if(curUserinfo.state == 'success') {
-              this._userInfo(curUserinfo.resultValue[0]);
-              //缓存当前用户名
-              this._saveName(this.user.username);
-              //缓存历史用户
-              var namelist = [];
-              if(getLoc('usernameList') != null) {
-                namelist = getLoc('usernameList');
-              }
-              namelist.push(this.user.username);
-              //去掉缓存里的firstNum
-              if(getLoc('firstNum')) {
-                localStorage.removeItem('firstNum');
-              }
-              //去重后缓存
-              this._usernameList(Array.from(new Set(namelist)));
-              //检测是否首次登录
-              if(curUserinfo.resultValue[0].lastLoginDate == '') {
-                Dialog.confirm({
-                  message: '当前密码为初始密码，是否立即修改密码',
-                  confirmButtonText: '立即修改',
-                  cancelButtonText: '稍后修改'
-                })
-                  .then(() => {
-                    this.$router.push('/changePassword');
-                    // on confirm
-                  })
-                  .catch(() => {
-                    //跳转到首页
-                    this.$router.push('/index');
-                    // on cancel
-                  });
-              } else {
-                //跳转到首页
-                this.$router.push('/index');
-              }
-              this.getNewMsg();
-
-              window.numTimer = setInterval(() => {
-                this.getNewMsg();
-              }, 3000)
-            } else {
-              Toast({ position: 'bottom', message: curUserinfo.stateMessage });
-              this.user.password = '';
-              this.isDisable = true;
-              var num = 3;
-              var loop = () => {
-                this.stoptime = '(' + num + ')';
-                if(num > 0) {
-                  num--;
-                  setTimeout(loop, 1000);
-                } else {
-                  this.stoptime = '';
-                  this.isDisable = false;
-                }
-              };
-              setTimeout(loop, 1);
-            }
+            var roleArr = div.querySelector('return').innerHTML;
+            setLoc('userRoles', roleArr);
           }
         });
       }

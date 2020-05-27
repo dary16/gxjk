@@ -85,7 +85,7 @@
     props: [],
     //监听属性 类似于data概念
     computed: {
-      ...mapState(['userInfo'])
+      ...mapState(['userInfo', 'xxgStatus'])
     },
     //监控data中的数据变化
     watch: {},
@@ -98,8 +98,41 @@
     mounted() { },
     //方法集合
     methods: {
+      ...mapMutations(['_warningNum', '_dispatchpoliceNum', '_handlingFaultNum', '_foundFaultNum']),
       changeUserFn() {
-        this.$emit("changeUserFn");
+        //判断角色里是否有巡线工并且有巡线任务在执行，则给出提示
+        if(this.roles.includes('巡线工') && this.xxgStatus == 'start') {
+          Dialog.confirm({
+            title: '提示',
+            message: '有巡线任务未完成，确认退出吗？',
+          })
+            .then(() => {
+              // on confirm
+              console.log('确认');
+              this.$emit("changeUserFn");
+              this._warningNum(null);
+              this._dispatchpoliceNum(null);
+              this._handlingFaultNum(null);
+              this._foundFaultNum(null);
+              setLoc('moduleAu', []);
+              this.getNoticeWS.ws.send('注销登录');//断开websocket连接
+              plus.push.clear();//清空所有推送消息
+            })
+            .catch(() => {
+              // on cancel
+              console.log('取消');
+              return false;
+            })
+        } else {
+          this.$emit("changeUserFn");
+          this._warningNum(null);
+          this._dispatchpoliceNum(null);
+          this._handlingFaultNum(null);
+          this._foundFaultNum(null);
+          this.getNoticeWS.ws.send('注销登录');//断开websocket连接
+          plus.push.clear();//清空所有推送消息
+          setLoc('moduleAu', []);
+        }
       },
       toChangePassword() {
         this.$router.push("/changePassword");

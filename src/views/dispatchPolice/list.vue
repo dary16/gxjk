@@ -20,6 +20,7 @@
           @refresh="onDownRefresh('unfinished')"
         >
           <van-list
+            id='unfinished-list'
             v-model="unfinished.isUpLoading"
             :finished="unfinished.upFinished"
             :immediate-check="false"
@@ -36,6 +37,7 @@
               v-if="unfinished.show"
               :items="unfinished.data"
               :infoFn="infoFn"
+              :showIcon="false"
               v-on:infoIdFn="infoIdFn"
             ></v-list-item>
             <div
@@ -54,6 +56,7 @@
           @refresh="onDownRefresh('finished')"
         >
           <van-list
+            id='finished-list'
             v-model="finished.isUpLoading"
             :finished="finished.upFinished"
             :immediate-check="false"
@@ -70,6 +73,7 @@
               v-if="finished.show"
               :items="finished.data"
               v-on:infoIdFn="infoFnFinished"
+              :showIcon="false"
             ></v-list-item>
             <div
               v-else
@@ -87,6 +91,7 @@
   import { mapActions, mapMutations, mapState } from 'vuex';
   import { Notify } from 'vant';
   export default {
+    props: ['flagRe'],
     data() {
       //这里存放数据
       return {
@@ -95,9 +100,7 @@
         infoId: '',
         isShow: 'show',
         gohome: true,
-        serverTime: '',
         active: 0,
-        newMsgRow: 0,
         unfinished: {
           type: '已派警,处理中',
           text: '已经拉到最底了',
@@ -129,23 +132,33 @@
         }
       };
     },
+    watch: {
+      flagRe(newVal, oldVal) {
+        if(this.active == 1) {
+          document.getElementById('finished-list').scrollIntoView();
+          this.finished.isDownLoading = true;
+          this.onDownRefresh('finished');
+        } else if(this.active == 0) {
+          document.getElementById('unfinished-list').scrollIntoView();
+          this.unfinished.isDownLoading = true;
+          this.onDownRefresh('unfinished');
+        }
+      }
+    },
     //监听属性 类似于data概念
     computed: {
-      ...mapState(['activeIndex', 'getDispatchPoliceTime'])
+      ...mapState(['activeIndex', 'getDispatchPoliceTime','newMsgNum'])
     },
     //生命周期 - 创建完成（可以访问当前this实例）
     created() {
       this.active = this.activeIndex;
-      if(this.$route.params.newMsgRow) {
-        this.newMsgRow = this.$route.params.newMsgRow;
-      }
       //初始化数据
       this.initData('unfinished');
       this.initData('finished');
     },
     //方法集合
     methods: {
-      ...mapMutations(['_userInfo', '_getDispatchPoliceTime', '_isRefresh', '_warnId', '_disptId', '_activeIndex']),
+      ...mapMutations(['_userInfo', '_warnId', '_disptId', '_activeIndex','_newMsgNum']),
       ...mapActions(['_getInfo']),
       infoFn() {
         this.$router.push('/unfinishedDetails');
@@ -166,15 +179,29 @@
       onDownRefresh(val) {
         this[val].pageNumber = 1;
         this[val].upFinished = false;
-        this[val].isDownLoading = false;
-        //下拉时显示更新消息数
-        if(val == 'unfinished') {
-          if(this.newMsgRow > 0) {
-            Notify({ type: 'primary', message: '更新了' + this.newMsgRow + '条消息', duration: 1500 });
-          } else {
-            Notify({ type: 'primary', message: '暂无更多新消息', duration: 1500 });
+        setTimeout(() => {
+          this[val].isDownLoading = false;
+          //下拉时显示更新消息数
+          if(val == 'unfinished') {
+            if(this.newMsgNum > 0) {
+              Notify({ type: 'primary', message: '更新了' + this.newMsgNum + '条消息', duration: 1500 });
+              const params = getPostData("findNewDispatchPoliceNum", [getLoc('userInfo').userID,getLoc('getDispatchPoliceTime')]);
+              this._getInfo({
+                ops: params,
+                method: "post",
+                api: "findNewDispatchPoliceNum",
+                callback: res => {
+                  var div = document.createElement("div");
+                  div.innerHTML = res;
+                  var listInfoData = div.querySelector("return").innerHTML;
+                  this._newMsgNum(Number(listInfoData));
+                }
+              });
+            } else {
+              Notify({ type: 'primary', message: '暂无更多新消息', duration: 1500 });
+            }
           }
-        }
+        }, 500);
         this.initData(val); //加载数据
       },
       onLoad(val) {
@@ -182,6 +209,7 @@
           this[val].pageNumber++;
           this.initData(val);
         }
+        this[val].isUpLoading = false;
       },
       //获取数据 参数val  unfinished:未完成 finished:已完成
       initData(val) {
@@ -195,7 +223,6 @@
           callback: res => {
             if(val == 'unfinished' && this[val].pageNumber === 1) {
               this.getServerTime();
-              this._isRefresh(true);
             }
             this[val].loading = false;
             var div = document.createElement('div');
@@ -204,8 +231,9 @@
             if(JSON.parse(listInfoData).isLastPage) {
               this[val].isLastPage = true;
             }
+            //判断是否有下一页
+            let hasNextPage = JSON.parse(listInfoData).hasNextPage;
             listInfoData = JSON.parse(listInfoData).list;
-            console.log(listInfoData);
             //如果只有一条数据时，上拉的最低文字不显示
             if(this[val].pageNumber === 1 && listInfoData.length < 2) {
               this[val].text = '';
@@ -215,7 +243,8 @@
             if(listInfoData.length > 0) {
               this[val].show = true;
               this[val].data = [];
-              if(listInfoData.length < this[val].pageSize) {
+              //已加载完所有数据
+              if(!hasNextPage) {
                 this[val].upFinished = true;
               }
               //处理数据
@@ -230,22 +259,25 @@
                   dispatchId: this[val].deviceList[i].dispatchPoliceID,
                   title: this[val].deviceList[i].warningTypeLabel + '告警',
                   time: this[val].deviceList[i].warningTimeFormat,
-                  content: this[val].deviceList[i].warningAddress + ',标桩号：' + this[val].deviceList[i].stakeNO + ',预置位：' + this[val].deviceList[i].presetNO + ',发生' + this[val].deviceList[i].warningTypeLabel + '告警'
+                  content: this[val].deviceList[i].warningAddress + '，标桩号：' + this[val].deviceList[i].stakeNO + '，预置位：' + this[val].deviceList[i].presetNO + '，发生' + this[val].deviceList[i].warningTypeLabel + '告警',
+                  warningStatus: this[val].deviceList[i].status,
+                  warningStatusClass: ''
                 };
+                if(this[val].deviceList[i].status === '已派警') {
+                  newdata.warningStatusClass = 'btn-receipt';
+                } else if(this[val].deviceList[i].status === '处理中') {
+                  newdata.warningStatusClass = 'btn-sendPolice';
+                } else {
+                  newdata.warningStatusClass = 'btn-isok';
+                }
                 this[val].data.push(newdata);
               }
-              this[val].isUpLoading = false;
-              this[val].isDownLoading = false;
             } else {
-              this[val].text = '';
-              this[val].upFinished = false;
               this[val].show = false;
-              this[val].isDownLoading = false;
               return;
             }
           }
         });
-        this[val].isUpLoading = false;
       },
       //获取服务器时间
       getServerTime() {
@@ -258,8 +290,7 @@
             var div = document.createElement('div');
             div.innerHTML = res;
             var listInfoData = div.querySelector('return').innerHTML;
-            this.serverTime = listInfoData;
-            this._getDispatchPoliceTime(this.serverTime);
+            setLoc('getDispatchPoliceTime',listInfoData);
           }
         });
       },
@@ -277,6 +308,9 @@
     right: 0;
     bottom: 0;
     left: 0;
+    .van-pull-refresh {
+      min-height: calc(100vh - 3.6rem);
+    }
     .van-tabs {
       position: absolute;
       top: 46px;

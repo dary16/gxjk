@@ -51,13 +51,14 @@
         </div>
       </div>
     </div>
+    <v-loading v-show="uploading"></v-loading>
   </div>
 </template>
 
 <script>
   import { mapActions } from 'vuex';
-  import { getPostData, getParams, getLoc } from "@/utils/common.js";
-  import { Toast, Dialog } from "vant";
+  import { getPostData, getParams, getLoc } from '@/utils/common.js';
+  import { Toast, Dialog } from 'vant';
   export default {
     data() {
       //这里存放数据
@@ -68,10 +69,11 @@
           warningID: '',
           verifyPersonID: '',
           verifyContent: '',
-          ImageNameList: []
+          ImageNameList: [],
         },
         fileList: [],
-        imgList: []
+        imgList: [],
+        uploading: false,
       };
     },
     //生命周期 - 创建完成（可以访问当前this实例）
@@ -85,37 +87,38 @@
       ...mapActions(['_getInfo']),
       //提交
       commitFn() {
+        // this.objData.ImageNameList.length = await this.afterRead();
         if(!this.objData.verifyContent) {
-          Toast({ position: "bottom", message: "内容不能为空" });
+          Toast({ position: 'bottom', message: '内容不能为空' });
           return false;
         }
         if(this.objData.ImageNameList.length === 0) {
-          Toast({ position: "bottom", message: "请上传照片" });
+          Toast({ position: 'bottom', message: '请上传照片' });
           return false;
         }
-        let params = getPostData("addDispatchPolice", {
-          "warningID": this.objData.warningID,
-          "verifyPersonID": this.objData.verifyPersonID,
-          "verifyContent": this.objData.verifyContent,
-          "ImageNameList": this.objData.ImageNameList
+        let params = getPostData('addDispatchPolice', {
+          warningID: this.objData.warningID,
+          verifyPersonID: this.objData.verifyPersonID,
+          verifyContent: this.objData.verifyContent,
+          ImageNameList: this.objData.ImageNameList
         });
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "addDispatchPolice",
+          method: 'post',
+          api: 'addDispatchPolice',
           callback: res => {
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
 
-            var resData = JSON.parse(div.querySelector("return").innerHTML);
+            var resData = JSON.parse(div.querySelector('return').innerHTML);
             if(resData.result === '' && resData.status === 'success') {
               this.$router.push('/dispatchPolice');
             } else {
-              Toast({ position: "bottom", message: "上传失败" });
+              Toast({ position: 'bottom', message: '上传失败' });
               this.$router.push('/dispatchPolice');
             }
           }
-        })
+        });
       },
       //关闭
       cancelFn() {
@@ -123,31 +126,34 @@
       },
       //上传前进行校验
       beforeRead(file) {
-        if(file.type !== "image/jpeg") {
-          Toast('请上传 jpg 格式图片');
+        if(file.type === 'image/jpeg' || file.type === 'image/png') {
+          return true;
+        } else {
+          Toast('请上传 jpg或png 格式图片');
           return false;
         }
-        return true;
       },
       afterRead(file) {
         // 此时可以自行将文件上传至服务器
         this.fileList.push(file);
-
+        this.uploading = true;
         var base64Img = file.content;
-        let params = getPostData("uploadDispatchVerifyImage", [base64Img]);
+        let params = getPostData('uploadDispatchVerifyImage', [base64Img]);
 
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "uploadDispatchVerifyImage",
+          method: 'post',
+          api: 'uploadDispatchVerifyImage',
           callback: res => {
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var imgSrc = div.querySelector("return").innerHTML;
+            var imgSrc = div.querySelector('return').innerHTML;
+            // console.log(imgSrc);
             this.objData.ImageNameList.push(imgSrc);
+            this.uploading = false;
+            // Toast('图片上传成功');
           }
-        })
-
+        });
       },
       deleteFn(delFile) {
         this.fileList.forEach((item, index) => {
@@ -155,16 +161,16 @@
             this.fileList.splice(index, 1);
             this.objData.ImageNameList.splice(index, 1);
           }
-        })
+        });
       },
       refrashFn() {
         // this.objData.dispatchPoliceID = this.$route.params.dispatchId;
         // this.objData.verifyPersonID = getLoc('userInfo').userID;
       }
     }
-  }
+  };
 </script>
-<style lang='less' scoped>
+<style lang="less" scoped>
   .list {
     background: #f3f3f3;
     position: absolute;

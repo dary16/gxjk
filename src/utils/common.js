@@ -56,7 +56,7 @@ export function formatDate(time, type) {
 
 export function getPostData(name, arr) {
     let type = "";
-    if (name == "login" || name == "checkPassword" || name == "modifyPassword" || name == "getSystemTime" || name == "getAPPLatestEdition") {
+    if (name == "login" || name == "checkPassword" || name == "modifyPassword" || name == "getSystemTime" || name == "getAPPLatestEdition" || name == 'getUserInfo') {
         type = "login";
     } else if (name == "findUserRole" || name == "isPermission" || name == "checkIsPatrolman" || name == "findPatrolmans" || name == "getAllUntreatedInfoNum") {
         type = "user";
@@ -66,13 +66,43 @@ export function getPostData(name, arr) {
         type = "sensorfaultinfo";
     } else if (name == "getSiteInfoByUserID" || name == "getSensorBySiteID" || name == "dayNightCountData" || name == "perCarCountData" || name == "regionTypeCountData" || name == "depthOfBuriedPipeCountData") {
         type = "statisticschart";
-    } else if (name == "findWarningList" || name == "dealWarning" || name == "findNewWarningNum" || name == "getWarningInfoByID" || name == "getImageInfo") {
+    } else if (name == "findWarningList" || name == "findDispatchPersonListByDispatchPoliceID" || name == "dealWarning" || name == "findNewWarningNum" || name == "getWarningInfoByID" || name == "getImageInfo") {
         type = "warning";
+    } else if (name == "findSensorList") {
+        type = "sensor"
+    } else if (name = "insertClockInfo") {
+        type = "linewalkerclock"
     }
     var postdata = `<?xml version="1.0" encoding="UTF-8"?><soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.${type}.webservice.application.gds/"><soapenv:Header/><soapenv:Body>` +
         getParams(name, arr) +
         `</soapenv:Body></soapenv:Envelope>`;
     return postdata;
+}
+
+export function getPostObjData(name, arr) {
+    let type = "";
+    if (name == "loginSensor" || "logOutSensor" || "eightDirectionTurn" || "zoom" || "focus") {
+        type = "sensoroperation";
+    } else {
+        return false;
+    }
+    var postdata = '<?xml version="1.0" encoding="UTF-8"?>' +
+        '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.' + type + '.webservice.application.gds/">' +
+        '<soapenv:Header/>' +
+        '<soapenv:Body>' +
+        getObjParams(name, arr) +
+        '</soapenv:Body>' +
+        '</soapenv:Envelope>';
+    return postdata;
+}
+//校验密码，修改密码，校验资源
+export function getObjParams(name, arr) {
+    let str = '<ser:' + name + '>';
+    for (let index in arr) {
+        str += '<' + index + '>' + arr[index] + '</' + index + '>';
+    };
+    str += '</ser:' + name + '>';
+    return str;
 }
 
 export function getParams(name, arr) {
@@ -121,3 +151,5 @@ export function getLoc(k) {
     } catch (e) {}
     return uu;
 }
+
+//通过经纬度获取详细地址

@@ -1,6 +1,9 @@
 <template>
   <div class="fault">
-    <v-header :title="title" :isShow="isShow"></v-header>
+    <v-header
+      :title="title"
+      :isShow="isShow"
+    ></v-header>
     <van-loading
       size="30px"
       text-size="16px"
@@ -8,8 +11,7 @@
       style="margin-top:2rem;"
       vertical
       v-if="showLoading"
-      >加载中...</van-loading
-    >
+    >加载中...</van-loading>
     <div v-else>
       <div class="group1">
         <van-cell-group>
@@ -19,6 +21,12 @@
             :url="url"
           ></v-fault-info>
           <van-divider />
+          <van-field
+            label="故障提交人"
+            style="text-align:left"
+            disabled
+            v-model="submitterName"
+          />
           <van-field
             label="故障时间"
             style="text-align:left"
@@ -33,6 +41,13 @@
             v-show="faultReceptionTime != ''"
           />
           <van-field
+            label="故障接收人"
+            style="text-align:left"
+            disabled
+            v-model="faultReceiverName"
+            v-show="faultReceiverName != ''"
+          />
+          <van-field
             label="处理时间"
             style="text-align:left"
             disabled
@@ -40,26 +55,6 @@
             v-show="handlingTime != ''"
           />
         </van-cell-group>
-      </div>
-      <div v-show="isShowBtn">
-        <div class="group2" v-show="showBtn == '1'">
-          <div class="t-textarea">
-            恢复备注
-          </div>
-          <van-field
-            v-model="submitremark"
-            type="textarea"
-            class="textarea"
-            placeholder="请填写备注信息"
-          />
-          <van-divider />
-        </div>
-      </div>
-      <div class="group2" v-show="remark != ''">
-        <div class="t-textarea">
-          恢复备注
-        </div>
-        <div class="content">{{ remark }}</div>
       </div>
       <div class="group1">
         <van-cell-group>
@@ -80,10 +75,45 @@
         </van-cell-group>
       </div>
       <div v-show="isShowBtn">
-        <div class="btns" v-if="showBtn == '0'" @click="receiveFault()">
+        <div
+          class="group2"
+          v-show="showBtn == '1'"
+        >
+          <div class="t-textarea">
+            恢复备注
+          </div>
+          <van-field
+            v-model="submitremark"
+            type="textarea"
+            class="textarea"
+            placeholder="请填写备注信息"
+          />
+          <van-divider />
+        </div>
+      </div>
+      <div
+        class="group2"
+        v-show="remark != ''"
+      >
+        <div class="t-textarea">
+          恢复备注
+        </div>
+        <div class="content">{{ remark }}</div>
+      </div>
+
+      <div v-show="isShowBtn">
+        <div
+          class="btns"
+          v-if="showBtn == '0'"
+          @click="receiveFault()"
+        >
           确认接收
         </div>
-        <div class="btns" v-else-if="showBtn == '1'" @click="getServerTime()">
+        <div
+          class="btns"
+          v-else-if="showBtn == '1'"
+          @click="getServerTime()"
+        >
           处理并提交
         </div>
       </div>
@@ -92,81 +122,81 @@
 </template>
 
 <script>
-  import { getPostData, getParams, getLoc, setLoc } from "@/utils/common.js";
-  import { mapActions, mapMutations, mapState } from "vuex";
+  import { getPostData, getParams, getLoc, setLoc } from '@/utils/common.js';
+  import { mapActions, mapMutations, mapState } from 'vuex';
   import { Toast } from 'vant';
   export default {
     data() {
       //这里存放数据
       return {
-        title: "故障信息",
-        isShow: "",
+        title: '故障信息',
+        isShow: '',
         showLoading: true,
         isShowBtn: false,
-        serverTime: "",
-        faultCause: "",
-        faultStartTime: "",
-        faultReceptionTime: "",
-        handlingTime: "",
-        submitremark: "",
-        remark: "",
-        faultRecoveryTime: "",
-        confirmRepairedTime: "",
-        faultID: "",
+        faultCause: '',
+        faultStartTime: '',
+        faultReceptionTime: '',
+        handlingTime: '',
+        submitremark: '',
+        remark: '',
+        faultRecoveryTime: '',
+        confirmRepairedTime: '',
+        faultID: '',
         showBtn: '0',
-        title2: "故障详情",
-        url: require('../../assets/fault/fault.png')
+        title2: '故障详情',
+        url: require('../../assets/fault/fault.png'),
+        submitterName: '',//故障提交人
+        faultReceiverName: ''//故障接收人
       };
     },
-    props: [],
     //监听属性 类似于data概念
     computed: {
       ...mapState(['warnId'])
     },
-    //监控data中的数据变化
-    watch: {},
     //生命周期 - 创建完成（可以访问当前this实例）
     created() {
       this.faultID = this.warnId;
       this.init();
-    },
-    //生命周期 - 挂载完成（可以访问DOM元素）
-    mounted() {
     },
     //方法集合
     methods: {
       ...mapMutations(['_userInfo']),
       ...mapActions(['_getInfo']),
       init() {
-        const params = getPostData("getSensorFaultInfoByfaultID", [this.faultID]);
+        const params = getPostData('getSensorFaultInfoByfaultID', [this.faultID]);
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "getSensorFaultInfoByfaultID",
+          method: 'post',
+          api: 'getSensorFaultInfoByfaultID',
           callback: res => {
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var curUserinfo = JSON.parse(div.querySelector("return").innerHTML);
-            this.title += "(" + curUserinfo.status + ")";
+            var curUserinfo = JSON.parse(div.querySelector('return').innerHTML);
+            console.log(curUserinfo);
+            this.title += '(' + curUserinfo.status + ')';
             this.faultCause = curUserinfo.faultCause;
-            this.faultStartTime = curUserinfo.faultStartTime;
+            this.faultStartTime = curUserinfo.faultStartTimeFormat;
             this.submitTime = curUserinfo.submitTime;
             this.faultID = curUserinfo.faultID;
-            if (curUserinfo.faultReceptionTime) {
-              this.faultReceptionTime = curUserinfo.faultReceptionTime;
+            this.submitterName = curUserinfo.submitterName;
+            if(curUserinfo.faultReceptionTime) {
+              this.faultReceptionTime = curUserinfo.faultReceptionTimeFormat;
             }
-            if (curUserinfo.remark) {
+            if(curUserinfo.remark) {
               this.remark = curUserinfo.remark;
             }
-            if (curUserinfo.faultRecoveryTime) {
-              this.faultRecoveryTime = curUserinfo.faultRecoveryTime;
+            if(curUserinfo.faultRecoveryTime) {
+              this.faultRecoveryTime = curUserinfo.faultRecoveryTimeFormat;
             }
-            if (curUserinfo.confirmRepairedTime) {
+            if(curUserinfo.confirmRepairedTime) {
               this.confirmRepairedTime = curUserinfo.confirmRepairedTime;
             }
-            if (curUserinfo.status === "已上报") {
+            if(curUserinfo.faultReceiverName) {
+              this.faultReceiverName = curUserinfo.faultReceiverName;
+            }
+            if(curUserinfo.status === '已上报') {
               this.showBtn = '0';
-            } else if (curUserinfo.status === "已接收") {
+            } else if(curUserinfo.status === '已接收') {
               this.showBtn = '1';
             } else {
               this.showBtn = '2';
@@ -176,43 +206,43 @@
         });
       },
       receiveFault() {
-        const params = getPostData("receiveSensorFaultInfo", { "faultID": this.faultID, "faultReceiver": getLoc('userInfo').userID });
+        const params = getPostData('receiveSensorFaultInfo', { faultID: this.faultID, faultReceiver: getLoc('userInfo').userID });
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "receiveSensorFaultInfo",
+          method: 'post',
+          api: 'receiveSensorFaultInfo',
           callback: res => {
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var curUserinfo = JSON.parse(div.querySelector("return").innerHTML);
-            if (curUserinfo.status == "faile") {
-              Toast("信息处理失败");
-            } else if (curUserinfo.result != "") {
-              Toast("该信息已被接收");
+            var curUserinfo = JSON.parse(div.querySelector('return').innerHTML);
+            if(curUserinfo.status == 'faile') {
+              Toast('信息处理失败');
+            } else if(curUserinfo.result != '') {
+              Toast('该信息已被接收');
             }
             this.$router.push('/handlingFault');
           }
         });
       },
       handlingFault() {
-        const params = getPostData("handleSensorFaultInfo", {
-          "faultID": this.faultID,
-          "handler": getLoc('userInfo').userID,
-          "faultRecoveryTime": this.serverTime,
-          "remark": this.submitremark
+        const params = getPostData('handleSensorFaultInfo', {
+          faultID: this.faultID,
+          handler: getLoc('userInfo').userID,
+          faultRecoveryTime: this.serverTime,
+          remark: this.submitremark
         });
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "handleSensorFaultInfo",
+          method: 'post',
+          api: 'handleSensorFaultInfo',
           callback: res => {
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var curUserinfo = JSON.parse(div.querySelector("return").innerHTML);
-            if (curUserinfo.status == "faile") {
-              Toast("信息处理失败");
-            } else if (curUserinfo.result != "") {
-              Toast("该信息已被处理");
+            var curUserinfo = JSON.parse(div.querySelector('return').innerHTML);
+            if(curUserinfo.status == 'faile') {
+              Toast('信息处理失败');
+            } else if(curUserinfo.result != '') {
+              Toast('该信息已被处理');
             }
             this.$router.push('/handlingFault');
           }
@@ -220,46 +250,44 @@
       },
       //获取服务器时间
       getServerTime() {
-        const params = getPostData("getSystemTime", []);
+        const params = getPostData('getSystemTime', []);
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "getSystemTime",
+          method: 'post',
+          api: 'getSystemTime',
           callback: res => {
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var listInfoData = div.querySelector("return").innerHTML;
+            var listInfoData = div.querySelector('return').innerHTML;
             this.serverTime = listInfoData;
             //处理信息
             this.handlingFault();
           }
-        })
+        });
       },
       //判断是否有处理告警权限
       checkIsPermission() {
-        //提交数据        
-        const params = getPostData("isPermission", [getLoc('userInfo').userID, "基础数据平台", "基础数据", "传感器故障管理"]);
+        //提交数据
+        const params = getPostData('isPermission', [getLoc('userInfo').userID, '基础数据平台', '基础数据', '传感器故障管理']);
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "isPermission",
+          method: 'post',
+          api: 'isPermission',
           callback: res => {
-            var div = document.createElement("div");
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var bool = div.querySelector("return").innerHTML;
-            if (bool == "true") {
+            var bool = div.querySelector('return').innerHTML;
+            if(bool == 'true') {
               this.isShowBtn = true;
             }
             this.showLoading = false;
           }
         });
-      },
+      }
     },
-    updated() { }, //生命周期 - 更新之后
-    activated() { }, //如果页面有keep-alive缓存功能，这个函数会触发
-  }
+  };
 </script>
-<style lang='less' scoped>
+<style lang="less" scoped>
   .fault {
     background: #f3f3f3;
     position: absolute;

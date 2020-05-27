@@ -11,8 +11,12 @@
 }
 
 .van-swipe .van-image__img {
-    width: auto !important;
-    height: 5rem !important;
+    width: auto;
+    height: 5rem;
+}
+
+.van-image-preview__image .van-image__img {
+    height: 100% !important;
 }
 
 .van-cell:not(:last-child)::after {
@@ -30,6 +34,11 @@
 .group1 .van-field__body input {
     font-size: 0.3rem !important;
     text-align: right;
+    color: #8e8e93;
+}
+
+.group1 .van-field__body textarea {
+    font-size: 0.3rem !important;
     color: #8e8e93;
 }
 
@@ -111,4 +120,8 @@
 .van-tabs__wrap.van-hairline--top-bottom {
     position: relative;
     z-index: 2200;
+}
+
+.group2 .van-checkbox__icon--checked .van-icon {
+    line-height: 1.25em !important;
 }

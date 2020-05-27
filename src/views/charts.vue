@@ -1,11 +1,15 @@
 <template>
   <div class="bg-gray">
-    <v-header :title="title" :gohome="gohome" :isShow="isShow"></v-header>
+    <v-header
+      :title="title"
+      :gohome="gohome"
+      :isShow="isShow"
+    ></v-header>
     <div class="search_box">
       <van-cell-group>
         <van-cell
           title="站点"
-          title-style="text-align:left"
+          title-style="text-align:left;flex:0.5;"
           :value="sitename"
           is-link
           @click="showSite"
@@ -61,26 +65,38 @@
       <van-popup v-model="isShowTimePicker" />
     </div>
     <div class="main">
-      <div id="echarts1" style="height:320px;"></div>
-      <div id="echarts2" style="height:320px;"></div>
-      <div id="echarts3" style="height:320px;"></div>
-      <div id="echarts4" style="height:320px;"></div>
+      <div
+        id="echarts1"
+        style="height:320px;"
+      ></div>
+      <div
+        id="echarts2"
+        style="height:520px;"
+      ></div>
+      <div
+        id="echarts3"
+        style="height:320px;"
+      ></div>
+      <div
+        id="echarts4"
+        style="height:320px;"
+      ></div>
     </div>
   </div>
 </template>
 
 <script>
-  import { getPostData, getParams, getLoc, setLoc, formatDate } from "@/utils/common.js";
-  import { mapActions, mapMutations, mapState } from "vuex";
+  import { getPostData, getParams, getLoc, setLoc, formatDate } from '@/utils/common.js';
+  import { mapActions, mapMutations, mapState } from 'vuex';
   import { DropdownMenu, DropdownItem, Toast, ActionSheet } from 'vant';
-  import echarts from "echarts";
+  import echarts from 'echarts';
   export default {
     data() {
       //这里存放数据
       return {
-        title: "系统告警统计图表",
+        title: '系统告警统计图表',
         active: 0,
-        isShow: "show",
+        isShow: 'show',
         gohome: true,
         isShowSite: false,
         isShowCamera: false,
@@ -93,30 +109,22 @@
         startTime: '',
         endTime: formatDate(new Date().getTime(), 2),
         showTime: new Date(),
-        minDate: new Date(2018, 1, 1),
+        minDate: new Date(2000, 1, 1),
         maxDate: new Date(),
         currentDateType: '',
         isShowTimePicker: false,
-        cameraList: [{
-          text: '全部',
-          value: '0'
-        }],
-        timeList: [{
-          text: '2019-11-11 09:45',
-          value: ''
-        }],
+        cameraList: [
+          {
+            text: '全部',
+            value: '0'
+          }
+        ],
         iconSite: require('../assets/chart/icon-site.png'),
         iconCamera: require('../assets/chart/icon-camera.png'),
         iconStarttime: require('../assets/chart/icon-starttime.png'),
-        iconEndtime: require('../assets/chart/icon-endtime.png'),
+        iconEndtime: require('../assets/chart/icon-endtime.png')
       };
     },
-    props: [],
-    //监听属性 类似于data概念
-    computed: {
-    },
-    //监控data中的数据变化
-    watch: {},
     //生命周期 - 创建完成（可以访问当前this实例）
     created() {
       this.getSite();
@@ -124,9 +132,9 @@
     },
     //生命周期 - 挂载完成（可以访问DOM元素）
     mounted() {
-      this.$nextTick(function () {
+      this.$nextTick(() => {
         this.initEcharts();
-      })
+      });
     },
     //方法集合
     methods: {
@@ -163,29 +171,23 @@
         var myChart3 = echarts.init(document.getElementById('echarts3'));
         var myChart4 = echarts.init(document.getElementById('echarts4'));
         var sensorID = this.camera;
-        if (this.camera == "0") {
-          sensorID = "";
+        if(this.camera == '0') {
+          sensorID = '';
         }
         //白天晚上告警统计
-        const params = getPostData("dayNightCountData", [
-          getLoc('userInfo').userID,
-          this.site,
-          sensorID,
-          this.startTime,
-          this.endTime
-        ]);
+        const params = getPostData('dayNightCountData', [getLoc('userInfo').userID, this.site, sensorID, this.startTime, this.endTime]);
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "dayNightCountData",
-          callback: res => {
-            var div = document.createElement("div");
+          method: 'post',
+          api: 'dayNightCountData',
+          callback: (res) => {
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var data = JSON.parse(div.querySelector("return").innerHTML);
+            var data = JSON.parse(div.querySelector('return').innerHTML);
             let xData = [],
               data1 = [],
               data2 = [];
-            for (let i = 0; i < data['白天'].length; i++) {
+            for(let i = 0; i < data['白天'].length; i++) {
               xData.push(data['白天'][i].statTime);
               data1.push(data['白天'][i].statValue);
               data2.push(data['夜间'][i].statValue);
@@ -266,53 +268,72 @@
               ]
             };
             myChart1.setOption(dayAndNightOption);
-
           }
         });
 
-        //人、车告警数量统计
-        const params2 = getPostData("perCarCountData", [
-          getLoc('userInfo').userID,
-          this.site,
-          sensorID,
-          this.startTime,
-          this.endTime
-        ]);
+        //识别对象告警数量统计
+        const params2 = getPostData('perCarCountData', [getLoc('userInfo').userID, this.site, sensorID, this.startTime, this.endTime]);
         this._getInfo({
           ops: params2,
-          method: "post",
-          api: "perCarCountData",
-          callback: res => {
-            var div = document.createElement("div");
+          method: 'post',
+          api: 'perCarCountData',
+          callback: (res) => {
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var data = JSON.parse(div.querySelector("return").innerHTML);
+            var data = JSON.parse(div.querySelector('return').innerHTML);
+            // console.log(data);
             let xData = [],
               data1 = [],
-              data2 = [];
-            for (let i = 0; i < data['车'].length; i++) {
-              xData.push(data['车'][i].statTime);
-              data1.push(data['车'][i].statValue);
-              data2.push(data['人'][i].statValue);
+              dataName = [];
+            let series = [];
+            for(var a in data) {
+              dataName.push(a);
+              let arr = [];
+              data[a].forEach((v, i) => {
+                if(xData.length < data[a].length) {
+                  xData.push(v.statTime);
+                }
+                arr.push(v.statValue);
+              });
+              //   console.log(data1);
+              series.push({
+                name: a,
+                type: 'bar',
+                data: arr,
+                markPoint: {
+                  data: [
+                    {
+                      type: 'max',
+                      name: '最大值'
+                    },
+                    {
+                      type: 'min',
+                      name: '最小值'
+                    }
+                  ]
+                },
+              });
             }
+
             // 指定图表的配置项和数据
             var perAndCarOption = {
               title: {
-                text: '人、车告警数量统计图',
+                text: '识别对象告警数量统计图',
                 textStyle: {
                   color: '#333',
                   fontWeight: 'normal'
                 },
-                top: '10px',
-                left: '5px'
+                x: 'left',
+                top: '10px'
               },
               color: ['#56A3F5', '#9E53D2', '#74D8D8'],
               tooltip: {
                 trigger: 'axis'
               },
               legend: {
-                right: '10px',
-                top: '10px',
-                data: ['人', '车'],
+                left: '20px',
+                top: '40px',
+                data: dataName,
                 textStyle: {
                   color: '#969799'
                 }
@@ -325,88 +346,47 @@
                 containLabel: true
               },
               calculable: true,
-              xAxis: [{
-                type: 'category',
-                data: xData,
-                axisLine: {
-                  lineStyle: {
-                    color: '#969799'
+              xAxis: [
+                {
+                  type: 'category',
+                  data: xData,
+                  axisLine: {
+                    lineStyle: {
+                      color: '#969799'
+                    }
                   }
                 }
-              }],
-              yAxis: [{
-                type: 'value',
-                axisLine: {
-                  lineStyle: {
-                    color: '#969799'
+              ],
+              yAxis: [
+                {
+                  type: 'value',
+                  axisLine: {
+                    lineStyle: {
+                      color: '#969799'
+                    }
                   }
                 }
-              }],
-              series: [{
-                name: '人',
-                type: 'bar',
-                data: data2,
-                markPoint: {
-                  data: [{
-                    type: 'max',
-                    name: '最大值'
-                  }, {
-                    type: 'min',
-                    name: '最小值'
-                  }]
-                },
-                markLine: {
-                  data: [{
-                    type: 'average',
-                    name: '平均值'
-                  }]
-                }
-              }, {
-                name: '车',
-                type: 'bar',
-                data: data1,
-                markPoint: {
-                  data: [{
-                    type: 'max',
-                    name: '最大值'
-                  }, {
-                    type: 'min',
-                    name: '最小值'
-                  }]
-                },
-                markLine: {
-                  data: [{
-                    type: 'average',
-                    name: '平均值'
-                  }]
-                }
-              }]
+              ],
+              series: series
             };
 
             myChart2.setOption(perAndCarOption);
-
           }
         });
         //地区告警统计
-        const params3 = getPostData("regionTypeCountData", [
-          getLoc('userInfo').userID,
-          this.site,
-          sensorID,
-          this.startTime,
-          this.endTime
-        ]);
+        const params3 = getPostData('regionTypeCountData', [getLoc('userInfo').userID, this.site, sensorID, this.startTime, this.endTime]);
         this._getInfo({
           ops: params3,
-          method: "post",
-          api: "regionTypeCountData",
-          callback: res => {
-            var div = document.createElement("div");
+          method: 'post',
+          api: 'regionTypeCountData',
+          callback: (res) => {
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var data = JSON.parse(div.querySelector("return").innerHTML);
+            var data = JSON.parse(div.querySelector('return').innerHTML);
 
             let xData = [],
               data1 = [];
-            for (let i = 0; i < data.length; i++) {
+            for(let i = 0; i < data.length; i++) {
               xData.push(data[i].statName);
               data1.push({ name: data[i].statName, value: data[i].statValue });
             }
@@ -424,7 +404,7 @@
               color: ['#56A3F5', '#9E53D2', '#74D8D8'],
               tooltip: {
                 trigger: 'item',
-                formatter: "{a} <br/>{b} : {c} ({d}%)"
+                formatter: '{a} <br/>{b} : {c} ({d}%)'
               },
               legend: {
                 top: '40%',
@@ -453,29 +433,22 @@
               ]
             };
             myChart3.setOption(option);
-
           }
         });
         //埋管深度告警数量统计
-        const params4 = getPostData("depthOfBuriedPipeCountData", [
-          getLoc('userInfo').userID,
-          this.site,
-          sensorID,
-          this.startTime,
-          this.endTime
-        ]);
+        const params4 = getPostData('depthOfBuriedPipeCountData', [getLoc('userInfo').userID, this.site, sensorID, this.startTime, this.endTime]);
         this._getInfo({
           ops: params4,
-          method: "post",
-          api: "depthOfBuriedPipeCountData",
-          callback: res => {
-            var div = document.createElement("div");
+          method: 'post',
+          api: 'depthOfBuriedPipeCountData',
+          callback: (res) => {
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var data = JSON.parse(div.querySelector("return").innerHTML);
+            var data = JSON.parse(div.querySelector('return').innerHTML);
 
             let xData = [],
               data1 = [];
-            for (let i = 0; i < data.length; i++) {
+            for(let i = 0; i < data.length; i++) {
               xData.push(data[i].statName);
               data1.push({ name: data[i].statName, value: data[i].statValue });
             }
@@ -493,7 +466,7 @@
               color: ['#56A3F5', '#9E53D2', '#74D8D8'],
               tooltip: {
                 trigger: 'item',
-                formatter: "{a} <br/>{b}: {c} ({d}%)"
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
               },
               grid: {
                 top: '30%',
@@ -511,105 +484,109 @@
                   color: '#51b3f2'
                 }
               },
-              series: [{
-                name: '告警数量',
-                type: 'pie',
-                radius: ['50%', '70%'],
-                avoidLabelOverlap: false,
-                label: {
-                  normal: {
-                    show: false,
-                    position: 'center'
-                  },
-                  emphasis: {
-                    show: true,
-                    textStyle: {
-                      fontSize: '30',
-                      fontWeight: 'bold'
+              series: [
+                {
+                  name: '告警数量',
+                  type: 'pie',
+                  radius: ['50%', '70%'],
+                  avoidLabelOverlap: false,
+                  label: {
+                    normal: {
+                      show: false,
+                      position: 'center'
+                    },
+                    emphasis: {
+                      show: true,
+                      textStyle: {
+                        fontSize: '30',
+                        fontWeight: 'bold'
+                      }
                     }
-                  }
-                },
-                labelLine: {
-                  normal: {
-                    show: false
-                  }
-                },
-                data: data1
-              }]
+                  },
+                  labelLine: {
+                    normal: {
+                      show: false
+                    }
+                  },
+                  data: data1
+                }
+              ]
             };
 
             myChart4.setOption(conduitOption);
-
           }
         });
       },
+      //获取站点
       getSite() {
-        const params = getPostData("getSiteInfoByUserID", [
-          getLoc('userInfo').userID
-        ]);
+        const params = getPostData('getSiteInfoByUserID', [getLoc('userInfo').userID]);
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "getSiteInfoByUserID",
-          callback: res => {
-            var div = document.createElement("div");
+          method: 'post',
+          api: 'getSiteInfoByUserID',
+          callback: (res) => {
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var data = JSON.parse(div.querySelector("return").innerHTML);
-            if (data.state == "success") {
-              for (var i = 0; i < data.resultValue.length; i++) {
-                this.siteList.push({ name: data.resultValue[i].siteName, value: data.resultValue[i].siteID });
-              }
-              this.site = data.resultValue[0].siteID;
-              this.sitename = data.resultValue[0].siteName;
+            var data = JSON.parse(div.querySelector('return').innerHTML);
 
+            if(data.state == 'success') {
+              if(data.resultValue.length > 0) {
+                for(var i = 0; i < data.resultValue.length; i++) {
+                  //   console.log(data.resultValue[i]);
+                  this.siteList.push({ name: data.resultValue[i].siteName, value: data.resultValue[i].siteID });
+                }
+                this.site = data.resultValue[0].siteID;
+                this.sitename = data.resultValue[0].siteName;
+              }
               this.getSensor(this.site);
             } else {
               Toast(data.stateMessage);
             }
           }
-        })
+        });
       },
+      //获取摄像头
       getSensor(siteID) {
-        const params = getPostData("getSensorBySiteID", [
-          siteID
-        ]);
+        const params = getPostData('getSensorBySiteID', [siteID]);
         this._getInfo({
           ops: params,
-          method: "post",
-          api: "getSensorBySiteID",
-          callback: res => {
-            var div = document.createElement("div");
+          method: 'post',
+          api: 'getSensorBySiteID',
+          callback: (res) => {
+            var div = document.createElement('div');
             div.innerHTML = res;
-            var data = JSON.parse(div.querySelector("return").innerHTML);
+            var data = JSON.parse(div.querySelector('return').innerHTML);
             this.cameraList = [];
-            if (data.state == "success") {
-              this.cameraList.push({ name: "全部", value: 0 });
-              for (var i = 0; i < data.resultValue.length; i++) {
+            if(data.state == 'success') {
+              this.cameraList.push({ name: '全部', value: 0 });
+              for(var i = 0; i < data.resultValue.length; i++) {
                 this.cameraList.push({ name: data.resultValue[i].sensorNO, value: data.resultValue[i].sensorNO });
               }
               this.camera = 0;
-              this.cameraname = "全部";
+              this.cameraname = '全部';
               this.initEcharts();
             } else {
               Toast(data.stateMessage);
             }
           }
-        })
+        });
       },
       showTimePicker(t) {
         this.currentDateType = t;
         this.isShowTimePicker = true;
-        if (t == "startTime") {
+        if(t == 'startTime') {
           this.showTime = new Date(this.startTime);
           this.maxDate = new Date(this.endTime);
+          this.minDate = new Date(2000, 1, 1);
         } else {
           this.showTime = new Date(this.endTime);
           this.minDate = new Date(this.startTime);
+          this.maxDate = new Date();
         }
       },
       getTimeFn(times) {
         this.isShowTimePicker = false;
-        if (this.currentDateType == "startTime") {
+        if(this.currentDateType == 'startTime') {
           this.startTime = formatDate(times.getTime(), 2);
         } else {
           this.endTime = formatDate(times.getTime(), 2);
@@ -619,12 +596,10 @@
       closeTime() {
         this.isShowTimePicker = false;
       }
-    },
-    updated() { }, //生命周期 - 更新之后
-    activated() { }, //如果页面有keep-alive缓存功能，这个函数会触发
-  }
+    }
+  };
 </script>
-<style lang='less' scoped>
+<style lang="less" scoped>
   .bg-gray {
     position: absolute;
     top: 0;

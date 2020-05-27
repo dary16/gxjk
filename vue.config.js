@@ -8,12 +8,12 @@ module.exports = {
     assetsDir: 'assets',
     lintOnSave: false, //eslint-loader是否在保存的时候检查
     //webpack配置
-    chainWebpack: (config) => {},
-    configureWebpack: (config) => {
+    chainWebpack: config => {},
+    configureWebpack: config => {
         if (process.env.NODE_ENV === 'production') {
             //为生产环境修改配置
-            config.mode = 'production'
-                //将每个依赖包打包成单独js文件
+            config.mode = 'production';
+            //将每个依赖包打包成单独js文件
             let optimization = {
                 runtimeChunk: 'single',
                 splitChunks: {
@@ -24,26 +24,28 @@ module.exports = {
                         vendor: {
                             test: /[\\/]node_modules[\\/]/,
                             name(module) {
-                                const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1]
-                                return `npm.${packageName.replace('@','')}`
+                                const packageName = module.context.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/)[1];
+                                return `npm.${packageName.replace('@', '')}`;
                             }
                         }
                     }
                 },
-                minimizer: [new UglifyPlugin({
-                    uglifyOptions: {
-                        compress: {
-                            warning: false,
-                            drop_console: true, //console
-                            drop_debugger: false,
-                            pure_funcs: ['console.log'] //移除console
+                minimizer: [
+                    new UglifyPlugin({
+                        uglifyOptions: {
+                            compress: {
+                                warning: false,
+                                drop_console: true, //console
+                                drop_debugger: false,
+                                pure_funcs: ['console.log'] //移除console
+                            }
                         }
-                    }
-                })]
-            }
+                    })
+                ]
+            };
         } else {
             //为开发环境修改配置
-            config.mode = 'development'
+            config.mode = 'development';
         }
         Object.assign(config, {
             //开发生产共同配置
@@ -55,9 +57,9 @@ module.exports = {
                     '@v': path.resolve(__dirname, './src/views')
                 }
             }
-        })
+        });
     },
-    productionSourceMap: false, //生产环境是否生成sourceMao文件
+    productionSourceMap: false, //生产环境是否生成sourceMap文件
     //css相关设置
     css: {
         extract: true, //是否使用css分离插件 ExtractTextPlugin
@@ -83,18 +85,33 @@ module.exports = {
     //webpack-dev-server相关配置
     devServer: {
         port: 80, //端口
+        hot: true, //模块替换功能
+        inline: true, //设置为true,当源文件改变时会自动刷新页面
+        open: true, //用于devServer启动且第一次构建完成时，自动使用系统默认浏览器去打开
+        overlay: true, //在编译出错的时候，在浏览器页面上显示错误
         proxy: {
             '/webService': {
-                target: 'http://monitor.tj.chinatowercom.cn/webService',
+                target: 'http://monitor.chinatowercom.cn:8080/webService',
                 // target: 'http://192.168.15.205/webService',
-                // target: 'http://192.168.200.167/webService',
+                // target: 'http://192.168.200.167:8080/webService',
+                //现场
+                // target: 'https://pipelinemonitor.cn/webService',
                 changeOrigin: true, //允许websockets跨域
                 pathRewrite: {
                     '^/webService': ''
+                }
+            },
+            '/loginService': {
+                target: 'https://cas.chinatowercom.cn:10082',
+                //现场
+                // target: 'https://pipelinemonitor.cn:10083',
+                changeOrigin: true, //允许websockets跨域
+                pathRewrite: {
+                    '^/loginService': ''
                 }
             }
         }
     },
     //第三方插件配置
-    pluginOptions: {}
-}
+    pluginOptions: {},
+};

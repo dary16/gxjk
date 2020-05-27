@@ -19,6 +19,15 @@ import {
 import VueLazyLoad from 'vue-lazyload';
 import Mui from 'vue-awesome-mui';
 // import './utils/getNewMeg.js';
+import getNoticeWS from '@/utils/getNoticeWS'
+import BaiduMap from 'vue-baidu-map'
+
+Vue.use(BaiduMap, {
+    ak: '2f2svYyMmOfg9Yf7KrHfTOqXNU3zPLs7'
+})
+
+// 全局使用接收消息的websocket
+Vue.prototype.getNoticeWS = getNoticeWS;
 
 Vue.use(Vant);
 Vue.use(PullRefresh).use(List);
@@ -30,6 +39,7 @@ Vue.prototype.util = util;
 Vue.prototype.dialog = Dialog;
 Vue.prototype.$http = axios;
 Vue.prototype.mui = Mui;
+console.log(store, 'main');
 
 // 自定义组件格式，全局可用
 Object.keys(components).forEach(key => {

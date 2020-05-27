@@ -1,10 +1,20 @@
 <template>
   <div class="main">
-    <v-header :title="title" :isShow="isShow" :gohome="gohome"></v-header>
-    <router-view />
-    <v-setting v-if="showSetting" v-on:changeUserFn="changeUserFn"></v-setting>
+    <v-header
+      :title="title"
+      :isShow="isShow"
+      :gohome="gohome"
+    ></v-header>
+    <router-view :flagRe='flagRe' />
+    <v-setting
+      v-if="showSetting"
+      v-on:changeUserFn="changeUserFn"
+    ></v-setting>
     <van-tabbar v-model="active">
-      <van-tabbar-item @click="homeFn" :info="newMsg" v-if="newMsg != 0">
+      <van-tabbar-item
+        @click="homeFn"
+        :dot="newMsgNum ? true : false"
+      >
         <span>故障通知</span>
         <img
           slot="icon"
@@ -12,17 +22,9 @@
           :src="props.active ? icon.active : icon.normal"
         />
       </van-tabbar-item>
-      <van-tabbar-item @click="homeFn" v-else>
-        <span>故障通知</span>
-        <img
-          slot="icon"
-          slot-scope="props"
-          :src="props.active ? icon.active : icon.normal"
-        />
-      </van-tabbar-item>
-      <van-tabbar-item @click="setFn">
-        <span>我的</span>
-        <img
+          <van-tabbar-item @click="setFn">
+            <span>我的</span>
+            <img
           slot="icon"
           slot-scope="props"
           :src="props.active ? myicon.active : myicon.normal"
@@ -33,6 +35,7 @@
 </template>
 
 <script>
+  //操作员
   import { getPostData, getParams, getLoc, setLoc } from "@/utils/common.js";
   import { mapActions, mapMutations, mapState } from "vuex";
   export default {
@@ -44,9 +47,6 @@
         active: 0,
         isShow: "show",
         gohome: true,
-        timeout: null,
-        newMsg: 0,   //新消息条数提醒
-        newMsgRow: 0,
         icon: {
           normal: require('../../assets/fault01.png'),
           active: require('../../assets/fault02.png')
@@ -54,40 +54,35 @@
         myicon: {
           normal: require('../../assets/my01.png'),
           active: require('../../assets/my02.png')
-        }
+        },
+        flagRe: 0,
       };
     },
-    props: [],
     //监听属性 类似于data概念
     computed: {
-      ...mapState(['isRefresh'])
+      ...mapState(['foundFaultNum','newMsgNum'])
     },
     //监控data中的数据变化
     watch: {
-      isRefresh: function (val, oldVal) {
-        if (val) {
-          this.getNewMsgLength();
-        }
+      foundFaultNum(newVal,oldVal){
+        this.getNewMsgLength();
       }
     },
     //生命周期 - 创建完成（可以访问当前this实例） 
     created() {
-      if (this.$route.params.show) {
+      if(this.$route.params.show) {
         this.setFn();
         this.active = 1;
       } else {
         this.homeFn();
       }
-      this.timeout = setInterval(() => { this.getNewMsgLength(); }, 5000);
     },
     beforeDestroy() {
-      clearInterval(this.timeout);
+      this._newMsgNum(0);
     },
-    //生命周期 - 挂载完成（可以访问DOM元素）
-    mounted() { },
     //方法集合
     methods: {
-      ...mapMutations(['_userInfo', '_getFoundFaultTime', '_isRefresh']),
+      ...mapMutations(['_userInfo', '_isRefresh','_newMsgNum']),
       ...mapActions(['_getInfo']),
       setFn() {
         this.title = "个人中心";
@@ -96,37 +91,27 @@
       },
       homeFn() {
         this.title = "故障通知列表";
-        this.$router.push({ name: 'foundFaultList', params: { newMsgRow: this.newMsgRow } });
+        this.flagRe++;
+        this.$router.push('/foundFaultList');
         this.showSetting = false;
       },
       changeUserFn(val) {
-        clearInterval(this.timeout);
         setLoc('userInfo', '');
+        setLoc('currentUser', '');
         this.$router.push('/login');
       },
       //获取新消息
       getNewMsgLength() {
-        const params = getPostData("findSensorFaultInfoNotViewNum", {
-          "userID": getLoc('userInfo').userID,
-          "statuses": [
-            "已接收"
-          ],
-          "clickTime": getLoc('getFoundFaultTime')
-        });
+        const params = getPostData("findSensorFaultInfoNotViewNum", {"userID": getLoc('userInfo').userID,"statuses": "已处理","clickTime": getLoc('getFoundFaultTime')});
         this._getInfo({
           ops: params,
           method: "post",
           api: "findSensorFaultInfoNotViewNum",
           callback: res => {
-            this._isRefresh(false);
             var div = document.createElement("div");
             div.innerHTML = res;
             var listInfoData = div.querySelector("return").innerHTML;
-            this.newMsg = listInfoData;
-            this.newMsgRow = listInfoData;
-            if (this.newMsg > 99) {
-              this.newMsg = '99+';
-            }
+            this._newMsgNum(Number(listInfoData));
           }
         })
       }

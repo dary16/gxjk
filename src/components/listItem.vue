@@ -1,6 +1,10 @@
 <template>
   <div class="mainList">
-    <van-row v-for="item in items" :key="item.id" @click="infoFns(item)">
+    <van-row
+      v-for="(item, index) in items"
+      :key="index"
+      @click="infoFns(item)"
+    >
       <van-col span="5"> <span class="list-icon"></span></van-col>
       <van-col span="17">
         <van-cell
@@ -8,7 +12,40 @@
           title-class="content-title"
           :value="item.warningStatus"
           :value-class="item.warningStatusClass"
-        ></van-cell>
+        >
+          <template slot="title">
+            <span class="custom-title">{{ item.title }}</span>
+            <div
+              v-show="showIcon"
+              class="icon-style"
+            >
+              <van-icon
+                name="warn-o"
+                v-if="item.level == 0"
+                color="grey"
+                style="margin-top:.25rem"
+              />
+              <van-icon
+                name="warn-o"
+                v-else-if="item.level == 1"
+                color="red"
+                style="margin-top:.25rem"
+              />
+              <van-icon
+                name="warn-o"
+                v-else-if="item.level == 2"
+                color="orange"
+                style="margin-top:.25rem"
+              />
+              <van-icon
+                name="warn-o"
+                v-else
+                color="blue"
+                style="margin-top:.25rem"
+              />
+            </div>
+          </template>
+        </van-cell>
         <p class="content-time">{{ item.time }}</p>
         <p class="content-info">【描述】 {{ item.content }}</p>
       </van-col>
@@ -22,36 +59,24 @@
 <script>
   export default {
     data() {
-      return {
-      }
+      return {};
     },
-    props: ['items', 'infoFn'],
-    //监听属性 类似于data概念
-    computed: {},
-    //监控data中的数据变化
-    watch: {},
-    //生命周期 - 创建完成（可以访问当前this实例）
-    created() {
-
-    },
-    //生命周期 - 挂载完成（可以访问DOM元素）
-    mounted() {
-
-    },
+    props: ['items', 'infoFn', 'showIcon'],
     //方法集合
     methods: {
       infoFns(val) {
-        this.$emit("infoIdFn", val);
+        this.$emit('infoIdFn', val);
       }
-    },
-    updated() { }, //生命周期 - 更新之后
-    activated() { }, //如果页面有keep-alive缓存功能，这个函数会触发
-  }
+    }
+  };
 </script>
 
-<style lang='less' scoped>
+<style lang="less" scoped>
   .mainList {
     padding-top: 0.2rem;
+    .icon-style {
+      float: left;
+    }
     .van-row {
       margin: 0 0.35rem 0.2rem;
       padding: 0.15rem 0;
@@ -125,6 +150,12 @@
     background-size: 0.26rem;
     padding-left: 0.3rem;
     color: #ff976a;
+    font-size: 0.26rem;
+  }
+  .btn-isok span {
+    background-size: 0.26rem;
+    padding-left: 0.3rem;
+    color: #07c160;
     font-size: 0.26rem;
   }
 </style>
